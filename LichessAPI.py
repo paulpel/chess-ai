@@ -110,7 +110,6 @@ class ChessPositionRepresentation:
         stacked_boards = np.stack(all_boards, axis=0)
         return torch.from_numpy(stacked_boards)
 
-# class NNChessGameStateRepresentation:
     
 
 def get_random_games_from_player(username, num_games=100):
@@ -131,7 +130,7 @@ def extract_all_fens_from_pgn(pgn_text, player_color):
     return game_positions
 
 
-def get_all_positions(username, player_color, num_games=100):
+def get_games(username, player_color, num_games=100):
     """Get random positions from a user's games"""
     games = get_random_games_from_player(username, num_games)
     all_games = []
@@ -142,14 +141,49 @@ def get_all_positions(username, player_color, num_games=100):
     return all_games
 
 
-# Sample usage
-positions = get_all_positions('chesstacion', 'white', 20)
-for idx, position in enumerate(positions):
-    print(idx, position)
+def create_stacked_set_from_game(game, stack_size=2):
+    """
+    Create a list of stacked board representations from a game's FEN strings.
 
-# Example usage
-fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-chess_position = ChessPositionRepresentation(fen)
-tensor_representation = chess_position.to_tensor()
+    :param game: List of FEN strings representing the game states.
+    :param stack_size: The number of consecutive positions to stack.
+    :return: List of tensors, each containing 'stack_size' number of board states stacked along the channel dimension.
+    """
+    # Convert each FEN to its tensor representation
+    tensor_game = [ChessPositionRepresentation(fen).to_tensor() for fen in game]
 
-print(tensor_representation.shape)  # Should print: torch.Size([14, 8, 8])
+    # Create stacked sets with repeated early game states
+    stacked_sets = []
+    for i in range(len(tensor_game) - 1):
+        stack = []
+        for j in range(stack_size):
+            index = max(i - j + 1, 0)
+            stack.append(tensor_game[index])
+        # Concatenate the selected tensors along the channel dimension
+        stacked_tensor = torch.cat(stack, dim=0)
+        stacked_sets.append(stacked_tensor)
+
+    return stacked_sets
+
+
+def get_games_as_a_set(games, previous_moves=3):
+    """
+    Returns list of a processed games - tensors of size 8x8x(14 times stack_size). It represents the board state (8x8).
+    14 is the number of channel (2 are for pawns, 2 for rooks..., 1 for castling and 1 for en passant). The list is as follows:
+    [move played by player, current pos, prevoius moves] The number of previous moves is indicated by previous_moves
+
+    :param games: List of games. Game is list of positions in FEN notation.
+    :param previous_moves: Number of moves done before current position
+    :return: Processed games as list of tensors.
+    """
+    games_set = []
+    for idx, game in enumerate(games):
+        stacked_game = create_stacked_set_from_game(game, stack_size=previous_moves+2)
+        games_set.extend(stacked_game)
+    return games_set
+
+
+learning_set = get_games_as_a_set(get_games('chesstacion', 'white', 20))
+print(len(learning_set))
+print(learning_set[0][0])
+print(learning_set[0].shape)
