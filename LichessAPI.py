@@ -187,3 +187,6 @@ learning_set = get_games_as_a_set(get_games('chesstacion', 'white', 20))
 print(len(learning_set))
 print(learning_set[0][0])
 print(learning_set[0].shape)
+# 0 - 13 move that was played
+# 14- 27 current position
+# 28 - x*14 + 28 previous positions
