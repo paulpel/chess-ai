@@ -275,5 +275,5 @@ def get_games_as_a_set(games, colors, previous_moves=3, add_other_legal_moves=Tr
     return games_set
 
 
-fen_games, colors = get_games('chesstacion', 10)
+fen_games, colors = get_games('chesstacion', 100)
 games = get_games_as_a_set(fen_games, colors, 3)
