@@ -180,7 +180,7 @@ def generate_possible_fens_positions(fen):
     return fen_positions
 
 
-def create_stacked_set_from_game(game, color, stack_size=2):
+def create_stacked_set_from_game(game, color, stack_size=2, add_other_legal_moves=True):
     """
     Create a list of stacked board representations from a game's FEN strings.
 
@@ -189,48 +189,71 @@ def create_stacked_set_from_game(game, color, stack_size=2):
     :param stack_size: The number of consecutive positions to stack.
     :return: List of tensors, each containing 'stack_size' number of board states stacked along the channel dimension.
     """
-    # Convert each FEN to its tensor representation
-    tensor_game = [ChessPositionRepresentation(fen).to_tensor() for fen in game]
 
-    # Create stacked sets with repeated early game states
+    # Convert each FEN to its tensor representation
+    # tensor_game = [ChessPositionRepresentation(fen).to_tensor() for fen in game]
+
     stacked_sets = []
 
     if color == 'white':
         skip_last_pos = 0
-        if len(tensor_game) % 2 == 1:  # When white lost
+        if len(game) % 2 == 1:  # When white lost
             skip_last_pos = 1
-        for i in range(0, len(tensor_game) - skip_last_pos, 2):
+        for i in range(0, len(game) - skip_last_pos, 2):
             # indexes = []
-            stack = [tensor_game[i+1]]  # Result position
+            stack = [game[i+1]]  # Result position
             # indexes.append(i+1)
             for j in range(stack_size - 1):
                 index = max(i - 2*j, 0)  # Current and previous positions
-                stack.append(tensor_game[index])
+                stack.append(game[index])
                 # indexes.append(index)
             # Concatenate the selected tensors along the channel dimension
-            stacked_tensor = torch.cat(stack, dim=0)
-            stacked_sets.append(stacked_tensor)
+            # stacked_tensor = torch.cat(stack, dim=0)
+            stacked_sets.append(stack)
             # print(color, indexes)
     elif color == 'black':
         skip_last_pos = 0
-        if len(tensor_game) % 2 == 0:  # When black lost
+        if len(game) % 2 == 0:  # When black lost
             skip_last_pos = 1
-        for i in range(1, len(tensor_game) - skip_last_pos, 2):
+        for i in range(1, len(game) - skip_last_pos, 2):
             # indexes = []
-            stack = [tensor_game[i + 1]]  # Result position
+            stack = [game[i + 1]]  # Result position
             # indexes.append(i+1)
             for j in range(stack_size - 1):
                 index = max(i - 2 * j, 0)  # Current and previous positions
-                stack.append(tensor_game[index])
+                stack.append(game[index])
                 # indexes.append(index)
             # Concatenate the selected tensors along the channel dimension
-            stacked_tensor = torch.cat(stack, dim=0)
-            stacked_sets.append(stacked_tensor)
+            # stacked_tensor = torch.cat(stack, dim=0)
+            stacked_sets.append(stack)
             # print(color, indexes)
+    print(len(stacked_sets))
+
+    # Generating possible positions from every move if add_other_legal_moves = True
+    if add_other_legal_moves:
+        new_stacked_sets = []
+        target_values = []
+        for i, stacked_set in enumerate(stacked_sets):
+            new_stacked_sets.append(stacked_set)
+            target_values.append(1.0)
+
+            possible_positions = generate_possible_fens_positions(stacked_set[1])
+            short_possible_positions = random.sample(possible_positions, min(4, len(possible_positions)))
+            for j in range(len(short_possible_positions)):
+                # print(short_possible_positions[j], '\n', stacked_set[0], True if short_possible_positions[j] == stacked_set[0] else False)
+                if short_possible_positions[j] != stacked_set[0]:
+                    new_stacked_set = stacked_set.copy()
+                    new_stacked_set[0] = short_possible_positions[j]
+
+                    new_stacked_sets.append(new_stacked_set)
+                    target_values.append(0.0)
+                    # print(i, j, new_stacked_set)
+        print(target_values)
+        return new_stacked_sets
     return stacked_sets
 
 
-def get_games_as_a_set(games, colors, previous_moves=3):
+def get_games_as_a_set(games, colors, previous_moves=3, add_other_legal_moves=True):
     """
     Returns list of a processed games - tensors of size 8x8x(14 times stack_size). It represents the board state (8x8).
     14 is the number of channel (2 are for pawns, 2 for rooks..., 1 for castling and 1 for en passant). The list is as follows:
@@ -240,14 +263,17 @@ def get_games_as_a_set(games, colors, previous_moves=3):
     :param previous_moves: Number of moves done before current position
     :return: Processed games as list of tensors.
     """
+
+
     games_set = []
     for idx, game in enumerate(games):
-        stacked_game = create_stacked_set_from_game(game, colors[idx], stack_size=previous_moves+2)
+        stacked_game = create_stacked_set_from_game(game,
+                                                    colors[idx],
+                                                    stack_size=previous_moves+2,
+                                                    add_other_legal_moves=True)
         games_set.extend(stacked_game)
     return games_set
 
 
 fen_games, colors = get_games('chesstacion', 10)
 games = get_games_as_a_set(fen_games, colors, 3)
-print(games[0][0])
-print(games[0][14])
