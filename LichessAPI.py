@@ -1,10 +1,9 @@
-import lichess.api
-import lichess.pgn
 import chess.pgn
 import random
 import io
 import numpy as np
 import torch
+import requests
 
 
 class ChessPositionRepresentation:
@@ -110,42 +109,83 @@ class ChessPositionRepresentation:
         stacked_boards = np.stack(all_boards, axis=0)
         return torch.from_numpy(stacked_boards)
 
-    
 
 def get_random_games_from_player(username, num_games=100):
-    """Fetch random games of a player from Lichess"""
-    games = list(lichess.api.user_games(username, max=num_games))
-    return random.sample(games, min(num_games, len(games)))
+    url = f"https://lichess.org/api/games/user/{username}"
+    params = {
+        'max': num_games,
+        'perfType': 'blitz',
+        'pgnInJson': False
+    }
+    response = requests.get(url, params=params)
+
+    if response.status_code != 200:
+        print("Failed to fetch data: ", response.status_code)
+        print(response.text)  # Print the response content
+        return []
+
+    pgn_data = response.text
+    games = pgn_data.strip().split('\n\n\n')  # Split the PGN data into separate games
+
+    # Randomly select games if more than num_games
+    if len(games) > num_games:
+        games = random.sample(games, num_games)
+
+    annotated_games = []
+    for game in games:
+        game_lines = game.split('\n')
+        color = 'white' if any('[White "{}"]'.format(username) in line for line in game_lines) else 'black'
+        annotated_games.append((game, color))
+
+    return annotated_games
 
 
-def extract_all_fens_from_pgn(pgn_text, player_color):
+def extract_all_fens_from_pgn(pgn_text):
     """Extract random FEN positions from a game's PGN where the specified player is on the move"""
     pgn = chess.pgn.read_game(io.StringIO(pgn_text))
     game_positions = []
     board = pgn.board()
     for move in pgn.mainline_moves():
-        if (player_color == 'white' and board.turn) or (player_color == 'black' and not board.turn):
-            game_positions.append(board.fen())
+        game_positions.append(board.fen())
         board.push(move)
     return game_positions
 
 
-def get_games(username, player_color, num_games=100):
+def get_games(username, num_games=100):
     """Get random positions from a user's games"""
     games = get_random_games_from_player(username, num_games)
     all_games = []
+    colors = []
     for game in games:
-        pgn_text = lichess.pgn.from_game(game)
-        positions = extract_all_fens_from_pgn(pgn_text, player_color)
+        # print(game)
+        pgn_text = game[0]
+        player_color = game[1]
+        positions = extract_all_fens_from_pgn(pgn_text)
+
         all_games.append(positions)
-    return all_games
+        colors.append(player_color)
+        # print(player_color, positions)
+    return all_games, colors
 
 
-def create_stacked_set_from_game(game, stack_size=2):
+def generate_possible_fens_positions(fen):
+    board = chess.Board(fen)
+    fen_positions = []
+
+    for move in board.legal_moves:
+        board.push(move)  # Make the move
+        fen_positions.append(board.fen())  # Get the FEN string for new board
+        board.pop()  # Undo the move
+
+    return fen_positions
+
+
+def create_stacked_set_from_game(game, color, stack_size=2):
     """
     Create a list of stacked board representations from a game's FEN strings.
 
     :param game: List of FEN strings representing the game states.
+    :param color: The color of a player
     :param stack_size: The number of consecutive positions to stack.
     :return: List of tensors, each containing 'stack_size' number of board states stacked along the channel dimension.
     """
@@ -154,19 +194,43 @@ def create_stacked_set_from_game(game, stack_size=2):
 
     # Create stacked sets with repeated early game states
     stacked_sets = []
-    for i in range(len(tensor_game) - 1):
-        stack = []
-        for j in range(stack_size):
-            index = max(i - j + 1, 0)
-            stack.append(tensor_game[index])
-        # Concatenate the selected tensors along the channel dimension
-        stacked_tensor = torch.cat(stack, dim=0)
-        stacked_sets.append(stacked_tensor)
 
+    if color == 'white':
+        skip_last_pos = 0
+        if len(tensor_game) % 2 == 1:  # When white lost
+            skip_last_pos = 1
+        for i in range(0, len(tensor_game) - skip_last_pos, 2):
+            # indexes = []
+            stack = [tensor_game[i+1]]  # Result position
+            # indexes.append(i+1)
+            for j in range(stack_size - 1):
+                index = max(i - 2*j, 0)  # Current and previous positions
+                stack.append(tensor_game[index])
+                # indexes.append(index)
+            # Concatenate the selected tensors along the channel dimension
+            stacked_tensor = torch.cat(stack, dim=0)
+            stacked_sets.append(stacked_tensor)
+            # print(color, indexes)
+    elif color == 'black':
+        skip_last_pos = 0
+        if len(tensor_game) % 2 == 0:  # When black lost
+            skip_last_pos = 1
+        for i in range(1, len(tensor_game) - skip_last_pos, 2):
+            # indexes = []
+            stack = [tensor_game[i + 1]]  # Result position
+            # indexes.append(i+1)
+            for j in range(stack_size - 1):
+                index = max(i - 2 * j, 0)  # Current and previous positions
+                stack.append(tensor_game[index])
+                # indexes.append(index)
+            # Concatenate the selected tensors along the channel dimension
+            stacked_tensor = torch.cat(stack, dim=0)
+            stacked_sets.append(stacked_tensor)
+            # print(color, indexes)
     return stacked_sets
 
 
-def get_games_as_a_set(games, previous_moves=3):
+def get_games_as_a_set(games, colors, previous_moves=3):
     """
     Returns list of a processed games - tensors of size 8x8x(14 times stack_size). It represents the board state (8x8).
     14 is the number of channel (2 are for pawns, 2 for rooks..., 1 for castling and 1 for en passant). The list is as follows:
@@ -178,15 +242,12 @@ def get_games_as_a_set(games, previous_moves=3):
     """
     games_set = []
     for idx, game in enumerate(games):
-        stacked_game = create_stacked_set_from_game(game, stack_size=previous_moves+2)
+        stacked_game = create_stacked_set_from_game(game, colors[idx], stack_size=previous_moves+2)
         games_set.extend(stacked_game)
     return games_set
 
 
-learning_set = get_games_as_a_set(get_games('chesstacion', 'white', 20))
-print(len(learning_set))
-print(learning_set[0][0])
-print(learning_set[0].shape)
-# 0 - 13 move that was played
-# 14- 27 current position
-# 28 - x*14 + 28 previous positions
+fen_games, colors = get_games('chesstacion', 10)
+games = get_games_as_a_set(fen_games, colors, 3)
+print(games[0][0])
+print(games[0][14])
