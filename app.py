@@ -15,6 +15,7 @@ BLACK = (0, 0, 0)
 LIGHT_SQUARE = (238, 238, 210)  # Light square color
 DARK_SQUARE = (118, 150, 86)  # Dark square color
 
+
 class Chess:
     def __init__(self, player="w") -> None:
         self.board = [
@@ -101,7 +102,9 @@ class Chess:
 
                 piece = board[row][col]
                 if piece != ".":
-                    win.blit(self.piece_images[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
+                    win.blit(
+                        self.piece_images[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE)
+                    )
 
     def load_pieces(self):
         rook_img_b = pygame.image.load("Assets/rook_black.png").convert_alpha()
