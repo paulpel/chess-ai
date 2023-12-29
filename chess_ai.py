@@ -10,11 +10,20 @@ BOARD_SIZE = 512  # Adjust as needed
 SQUARE_SIZE = BOARD_SIZE // 8
 FPS = 60
 
+PANEL_WIDTH = 200  # Width of the side panel
+OFFSET = 10
+TOTAL_WIDTH = BOARD_SIZE + PANEL_WIDTH + OFFSET * 3
+TOTAL_HEIGHT = BOARD_SIZE + OFFSET * 2
+
+PIECES_PER_ROW = 4
+GRID_CELL_SIZE = PANEL_WIDTH // PIECES_PER_ROW
+
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 LIGHT_SQUARE = (240, 217, 181)
 DARK_SQUARE = (181, 136, 99)
+BACKGROUND = (73, 57, 44)
 
 WHITE_IS_HUMAN = True
 BLACK_IS_HUMAN = True
@@ -38,7 +47,12 @@ def load_images():
                 ),
                 (SQUARE_SIZE, SQUARE_SIZE),
             )
-    return images
+    small_images = {}
+    for key, image in images.items():
+        small_images[key] = pygame.transform.scale(
+            image, (GRID_CELL_SIZE, GRID_CELL_SIZE)
+        )
+    return images, small_images
 
 
 # Function to get square from mouse position
@@ -59,7 +73,10 @@ def draw_board(screen):
                 screen,
                 color,
                 pygame.Rect(
-                    col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE
+                    col * SQUARE_SIZE + OFFSET,
+                    row * SQUARE_SIZE + OFFSET,
+                    SQUARE_SIZE,
+                    SQUARE_SIZE,
                 ),
             )
 
@@ -81,25 +98,117 @@ def draw_pieces(screen, images, board):
             screen.blit(
                 images[color + symbol.upper()],
                 pygame.Rect(
-                    (square % 8) * SQUARE_SIZE,
-                    (square // 8) * SQUARE_SIZE,
+                    (square % 8) * SQUARE_SIZE + OFFSET,
+                    (square // 8) * SQUARE_SIZE + OFFSET,
                     SQUARE_SIZE,
                     SQUARE_SIZE,
                 ),
             )
 
 
+def get_captured_pieces(board):
+    # Define the initial set of pieces for each player
+    initial_pieces = {
+        "w": [
+            "R",
+            "N",
+            "B",
+            "Q",
+            "K",
+            "B",
+            "N",
+            "R",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+        ],
+        "b": [
+            "R",
+            "N",
+            "B",
+            "Q",
+            "K",
+            "B",
+            "N",
+            "R",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+            "P",
+        ],
+    }
+
+    current_pieces = {"w": [], "b": []}
+    for piece in board.piece_map().values():
+        color = "w" if piece.color == chess.WHITE else "b"
+        current_pieces[color].append(piece.symbol().upper())
+
+    captured_pieces = {"w": initial_pieces["w"].copy(), "b": initial_pieces["b"].copy()}
+    for color in ["w", "b"]:
+        for piece in current_pieces[color]:
+            if piece in captured_pieces[color]:
+                captured_pieces[color].remove(piece)
+
+    return captured_pieces
+
+
+def draw_panel(screen, board, images, player_times, turn):
+    # Draw a background for the panel
+    panel_bg = pygame.Rect(BOARD_SIZE + OFFSET * 2, 0 + OFFSET, PANEL_WIDTH, BOARD_SIZE)
+    pygame.draw.rect(screen, LIGHT_SQUARE, panel_bg)
+
+    # Display whose turn it is
+    turn_text = "White's Turn" if turn else "Black's Turn"
+    font = pygame.font.Font(None, 36)
+    text = font.render(turn_text, True, BLACK)
+    screen.blit(text, (BOARD_SIZE + 10 + OFFSET * 2, 20))
+
+    captured_pieces = get_captured_pieces(board)
+
+    # Display captured pieces in a grid for each player
+    def draw_captured_pieces(y_offset, pieces, color):
+        for i, piece in enumerate(pieces):
+            row = i // PIECES_PER_ROW
+            col = i % PIECES_PER_ROW
+            x = BOARD_SIZE + OFFSET * 2 + col * GRID_CELL_SIZE
+            y = y_offset + row * GRID_CELL_SIZE
+            piece_image = images[color + piece.upper()]
+            screen.blit(piece_image, (x, y))
+
+    # White captured pieces
+    draw_captured_pieces(60, captured_pieces["w"], "w")  # Adjust y_offset as needed
+
+    # Black captured pieces
+    draw_captured_pieces(
+        BOARD_SIZE // 2, captured_pieces["b"], "b"
+    )  # Adjust y_offset as needed
+
+
 # Main function
 def main():
     global dragging, dragged_piece, dragged_piece_pos, selected_square
-    screen = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE))
-    pygame.display.set_caption('Chess')
+    screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
+    screen.fill(BACKGROUND)
+    pygame.display.set_caption("Chess")
     clock = pygame.time.Clock()
-    images = load_images()
+    images, small_images = load_images()
     board = chess.Board()
 
+    player_times = (0, 0)
+
     while True:
-        human_turn = (board.turn and WHITE_IS_HUMAN) or (not board.turn and BLACK_IS_HUMAN)
+        human_turn = (board.turn and WHITE_IS_HUMAN) or (
+            not board.turn and BLACK_IS_HUMAN
+        )
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -112,10 +221,16 @@ def main():
                     piece = board.piece_at(selected_square)
                     if piece and (piece.color == board.turn):
                         # Construct the key for the images dictionary
-                        color = 'w' if piece.color == chess.WHITE else 'b'
-                        piece_name = piece.symbol().upper() if piece.color == chess.WHITE else piece.symbol().lower()
+                        color = "w" if piece.color == chess.WHITE else "b"
+                        piece_name = (
+                            piece.symbol().upper()
+                            if piece.color == chess.WHITE
+                            else piece.symbol().lower()
+                        )
                         image_key = color + piece_name.upper()
-                        dragged_piece = images[image_key]  # Use the correct key to fetch the image
+                        dragged_piece = images[
+                            image_key
+                        ]  # Use the correct key to fetch the image
                         dragged_piece_pos = pygame.mouse.get_pos()
                         dragging = True
 
@@ -129,11 +244,13 @@ def main():
 
         draw_board(screen)
         draw_pieces(screen, images, board)
+        draw_panel(screen, board, small_images, player_times, board.turn)
 
-        # Draw the dragged piece
         if dragging:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            screen.blit(dragged_piece, (mouse_x - SQUARE_SIZE // 2, mouse_y - SQUARE_SIZE // 2))
+            screen.blit(
+                dragged_piece, (mouse_x - SQUARE_SIZE // 2, mouse_y - SQUARE_SIZE // 2)
+            )
 
         clock.tick(FPS)
         pygame.display.flip()
