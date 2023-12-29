@@ -1,6 +1,13 @@
 import pygame
 import chess
 import os
+from stockfish import Stockfish
+import time
+
+# Adjust the path to your Stockfish executable
+STOCKFISH_PATH = "/usr/local/bin/stockfish" # or the relevant path on your system
+
+stockfish = Stockfish(STOCKFISH_PATH)
 
 # Initialize Pygame
 pygame.init()
@@ -26,7 +33,7 @@ DARK_SQUARE = (181, 136, 99)
 BACKGROUND = (73, 57, 44)
 
 WHITE_IS_HUMAN = True
-BLACK_IS_HUMAN = True
+BLACK_IS_HUMAN = False
 
 dragging = False  # Flag to track if a piece is being dragged
 dragged_piece = None  # Store the piece being dragged
@@ -203,9 +210,13 @@ def main():
     images, small_images = load_images()
     board = chess.Board()
 
+    last_move_time = 0
+    move_delay = 0.5  # 1 second delay between moves
+
     player_times = (0, 0)
 
     while True:
+        current_time = time.time()
         human_turn = (board.turn and WHITE_IS_HUMAN) or (
             not board.turn and BLACK_IS_HUMAN
         )
@@ -241,6 +252,12 @@ def main():
                     if move in board.legal_moves:
                         board.push(move)
                     selected_square = None
+            if not human_turn and current_time - last_move_time > move_delay:
+                stockfish.set_fen_position(board.fen())
+                best_move = stockfish.get_best_move()
+                if best_move:
+                    board.push(chess.Move.from_uci(best_move))
+                    last_move_time = current_time
 
         draw_board(screen)
         draw_pieces(screen, images, board)
@@ -252,8 +269,8 @@ def main():
                 dragged_piece, (mouse_x - SQUARE_SIZE // 2, mouse_y - SQUARE_SIZE // 2)
             )
 
-        clock.tick(FPS)
         pygame.display.flip()
+        clock.tick(FPS)
 
 
 if __name__ == "__main__":
