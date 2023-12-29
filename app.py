@@ -46,7 +46,7 @@ class Chess:
         }
         ids = ["X"] + [str(i) for i in range(8)]
         ids_row = " ".join(ids)
-        print('\n', ids_row)
+        print("\n", ids_row)
         count = 0
         for row in board:
             row_str = " ".join(
@@ -57,41 +57,42 @@ class Chess:
             )
             print(str(count), row_str)
             count += 1
-        print('\n')
+        print("\n")
 
     def read_position_from_fen(self, fen_string):
         current_row = 0
         current_col = 0
         i = 0
         for letter in fen_string:
-            i+=1
-            if letter == '/':
+            i += 1
+            if letter == "/":
                 current_row += 1
                 current_col = 0
-            elif letter.lower() in 'rnbqkp':
+            elif letter.lower() in "rnbqkp":
                 print(current_row, current_col, letter)
                 self.board[current_row][current_col] = letter.swapcase()
                 current_col += 1
             elif letter.isdigit():
                 for j in range(int(letter)):
-                    self.board[current_row][current_col] = '.'
+                    self.board[current_row][current_col] = "."
                     current_col += 1
             if current_row >= 7 and current_col >= 8:
                 break
-        side, castling, en_passant_target, _, _ = fen_string[i+1:].split()
+        side, castling, en_passant_target, _, _ = fen_string[i + 1 :].split()
         # print(side, castling, en_passant_target)
         self.player = side
-        self.white_turn = side == 'w'
-        self.black_castle = ['q' in castling, 'k' in castling]
-        self.white_castle = ['Q' in castling, 'K' in castling]
-        if en_passant_target != '-':
-            col = ord(en_passant_target[0]) - ord('a')
+        self.white_turn = side == "w"
+        self.black_castle = ["q" in castling, "k" in castling]
+        self.white_castle = ["Q" in castling, "K" in castling]
+        if en_passant_target != "-":
+            col = ord(en_passant_target[0]) - ord("a")
             row = 8 - int(en_passant_target[1])
             self.en_passant_target = (col, row)
+
     def main(self):
         """Main logic"""
         self.print_board(self.board)
-        example_pos = '7k/8/8/3pP3/8/8/8/7K w KQkq d6 0 1'
+        example_pos = "7k/8/8/3pP3/8/8/8/7K w KQkq d6 0 1"
         self.read_position_from_fen(example_pos)
         self.print_board(self.board)
         while not self.close:
@@ -117,7 +118,7 @@ class Chess:
                 self.update_castle()
                 input()
                 print("Possible moves(from_row, from_col, to_row, to_col):")
-                print('\n'.join([str(item) for item in filtered_moves]))
+                print("\n".join([str(item) for item in filtered_moves]))
                 print("Random move choosen:", random_move)
                 print("\nWhite turn!" if self.white_turn else "\nBlack turn!")
                 self.print_board(self.board)
@@ -156,10 +157,14 @@ class Chess:
         fig = self.board[from_row][from_col]
         if upgrade:
             fig = upgrade
-        if fig.lower() == 'p' and self.board[to_row][to_col] == '.' and from_col != to_col: # if en passant
-            self.board[from_row][to_col] = '.'
-        if fig.lower() == 'p' and abs(from_row-to_row) == 2:
-            self.en_passant_target = (from_col, from_row+to_row/2)
+        if (
+            fig.lower() == "p"
+            and self.board[to_row][to_col] == "."
+            and from_col != to_col
+        ):  # if en passant
+            self.board[from_row][to_col] = "."
+        if fig.lower() == "p" and abs(from_row - to_row) == 2:
+            self.en_passant_target = (from_col, from_row + to_row / 2)
         self.board[to_row][to_col] = fig
         self.board[from_row][from_col] = "."
 
@@ -306,11 +311,14 @@ class Chess:
                     else:
                         moves.append((row, col, row + direction, col + dy))
 
-
         if self.en_passant_target:
-            if row == self.en_passant_target[1] - direction \
-                    and (col == self.en_passant_target[0] + 1 or col == self.en_passant_target[0] - 1):
-                moves.append((row,col,self.en_passant_target[1], self.en_passant_target[0]))
+            if row == self.en_passant_target[1] - direction and (
+                col == self.en_passant_target[0] + 1
+                or col == self.en_passant_target[0] - 1
+            ):
+                moves.append(
+                    (row, col, self.en_passant_target[1], self.en_passant_target[0])
+                )
         return moves
 
     def generate_rook_moves(self, row, col, fig):
@@ -565,32 +573,45 @@ class Chess:
         remaining_enemy_type = set()
         for row in range(len(board)):
             for col in range(len(board[row])):
-                if fig.islower() != board[row][col].islower() and board[row][col] != ".":
+                if (
+                    fig.islower() != board[row][col].islower()
+                    and board[row][col] != "."
+                ):
                     remaining_enemy_type.add(board[row][col].lower())
-                if board[row][col].lower() == 'k' and board[row][col].islower() == fig.islower():
+                if (
+                    board[row][col].lower() == "k"
+                    and board[row][col].islower() == fig.islower()
+                ):
                     row_king, col_king = row, col
 
         remaining_enemy_type = list(remaining_enemy_type)
-        if 'p' in remaining_enemy_type:
+        if "p" in remaining_enemy_type:
             direction = 1 if self.player == "w" and fig.isupper() else -1
             for dy in (-1, 1):
                 if 0 <= col_king + dy < 8 and 0 <= row_king + direction < 8:
-                    if board[row_king + direction][col_king + dy].lower() == 'p' and board[row_king + direction][col_king + dy].islower() != fig.islower():
+                    if (
+                        board[row_king + direction][col_king + dy].lower() == "p"
+                        and board[row_king + direction][col_king + dy].islower()
+                        != fig.islower()
+                    ):
                         return True
-        if 'r' in remaining_enemy_type:
+        if "r" in remaining_enemy_type:
             directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
             for dr, dc in directions:
                 new_row, new_col = row_king + dr, col_king + dc
                 while 0 <= new_row < 8 and 0 <= new_col < 8:
                     target_piece = board[new_row][new_col]
-                    if target_piece != '.':
-                        if target_piece.lower() == 'q' and target_piece.islower() != fig.islower():
+                    if target_piece != ".":
+                        if (
+                            target_piece.lower() == "q"
+                            and target_piece.islower() != fig.islower()
+                        ):
                             return True
                         else:
                             break
                     new_row += dr
                     new_col += dc
-        if 'n' in remaining_enemy_type:
+        if "n" in remaining_enemy_type:
             knight_moves = [
                 (2, 1),
                 (1, 2),
@@ -605,22 +626,28 @@ class Chess:
                 new_row, new_col = row_king + dr, col_king + dc
                 if 0 <= new_row < 8 and 0 <= new_col < 8:
                     target_piece = board[new_row][new_col]
-                    if target_piece.lower() == 'n' and target_piece.islower() != fig.islower():
+                    if (
+                        target_piece.lower() == "n"
+                        and target_piece.islower() != fig.islower()
+                    ):
                         return True
-        if 'b' in remaining_enemy_type:
+        if "b" in remaining_enemy_type:
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
             for dr, dc in directions:
                 new_row, new_col = row_king + dr, col_king + dc
                 while 0 <= new_row < 8 and 0 <= new_col < 8:
                     target_piece = board[new_row][new_col]
-                    if target_piece != '.':
-                        if target_piece.lower() == 'b' and target_piece.islower() != fig.islower():
+                    if target_piece != ".":
+                        if (
+                            target_piece.lower() == "b"
+                            and target_piece.islower() != fig.islower()
+                        ):
                             return True
                         else:
                             break
                     new_row += dr
                     new_col += dc
-        if 'q' in remaining_enemy_type:
+        if "q" in remaining_enemy_type:
             directions = [
                 (-1, 0),
                 (1, 0),
@@ -635,14 +662,17 @@ class Chess:
                 new_row, new_col = row_king + dr, col_king + dc
                 while 0 <= new_row < 8 and 0 <= new_col < 8:
                     target_piece = board[new_row][new_col]
-                    if target_piece != '.':
-                        if target_piece.lower() == 'q' and target_piece.islower() != fig.islower():
+                    if target_piece != ".":
+                        if (
+                            target_piece.lower() == "q"
+                            and target_piece.islower() != fig.islower()
+                        ):
                             return True
-                        else :
+                        else:
                             break
                     new_row += dr
                     new_col += dc
-        if 'k' in remaining_enemy_type:
+        if "k" in remaining_enemy_type:
             king_moves = [
                 (-1, 0),
                 (1, 0),
@@ -657,46 +687,98 @@ class Chess:
                 new_row, new_col = row_king + dr, col_king + dc
                 if 0 <= new_row < 8 and 0 <= new_col < 8:
                     target_piece = board[new_row][new_col]
-                    if target_piece.islower() != fig.islower()  and target_piece.lower() == 'k':
+                    if (
+                        target_piece.islower() != fig.islower()
+                        and target_piece.lower() == "k"
+                    ):
                         return True
 
         return False
 
     def generate_castle_moves(self):
         moves = []
-        if (self.player == "w" and self.white_turn) or (self.player == 'b' and not self.white_turn):
-
+        if (self.player == "w" and self.white_turn) or (
+            self.player == "b" and not self.white_turn
+        ):
             fig = self.board[7][4]
-            if fig.lower() != 'k':
+            if fig.lower() != "k":
                 return moves
 
-            valid_bot_left = self.check_castle([(7, 2), (7, 3)],  [(7, 2), (7, 3), (7, 4)], fig)
-            valid_bot_right = self.check_castle([(7, 5), (7, 6)],  [(7, 4), (7, 5), (7, 6)], fig)
+            valid_bot_left = self.check_castle(
+                [(7, 2), (7, 3)], [(7, 2), (7, 3), (7, 4)], fig
+            )
+            valid_bot_right = self.check_castle(
+                [(7, 5), (7, 6)], [(7, 4), (7, 5), (7, 6)], fig
+            )
 
-            if self.player == "w" and self.white_castle[0] and valid_bot_left and self.white_turn:
+            if (
+                self.player == "w"
+                and self.white_castle[0]
+                and valid_bot_left
+                and self.white_turn
+            ):
                 moves.append(((7, 4, 7, 2), (7, 0, 7, 3)))
-            if self.player == "w" and self.white_castle[1] and valid_bot_right and self.white_turn:
+            if (
+                self.player == "w"
+                and self.white_castle[1]
+                and valid_bot_right
+                and self.white_turn
+            ):
                 moves.append(((7, 4, 7, 6), (7, 7, 7, 5)))
-            if self.player == "b" and self.black_castle[0] and valid_bot_left and not self.white_turn:
+            if (
+                self.player == "b"
+                and self.black_castle[0]
+                and valid_bot_left
+                and not self.white_turn
+            ):
                 moves.append(((7, 4, 7, 2), (7, 0, 7, 3)))
-            if self.player == "b" and self.black_castle[1] and valid_bot_right and not self.white_turn:
+            if (
+                self.player == "b"
+                and self.black_castle[1]
+                and valid_bot_right
+                and not self.white_turn
+            ):
                 moves.append(((7, 4, 7, 6), (7, 7, 7, 5)))
 
         else:
             fig = self.board[0][4]
-            if fig.lower() != 'k':
+            if fig.lower() != "k":
                 return moves
 
-            valid_up_left = self.check_castle([(0, 2), (0, 3)],  [(0, 2), (0, 3), (0, 4)], fig)
-            valid_up_right = self.check_castle([(0, 5), (0, 6)],  [(0, 4), (0, 5), (0, 6)], fig)
+            valid_up_left = self.check_castle(
+                [(0, 2), (0, 3)], [(0, 2), (0, 3), (0, 4)], fig
+            )
+            valid_up_right = self.check_castle(
+                [(0, 5), (0, 6)], [(0, 4), (0, 5), (0, 6)], fig
+            )
 
-            if self.player == "w" and self.white_castle[0] and valid_up_left and not self.white_turn:
+            if (
+                self.player == "w"
+                and self.white_castle[0]
+                and valid_up_left
+                and not self.white_turn
+            ):
                 moves.append(((0, 4, 0, 2), (0, 0, 0, 3)))
-            if self.player == "w" and self.white_castle[1] and valid_up_right and not self.white_turn:
+            if (
+                self.player == "w"
+                and self.white_castle[1]
+                and valid_up_right
+                and not self.white_turn
+            ):
                 moves.append(((0, 4, 0, 6), (0, 7, 0, 5)))
-            if self.player == "b" and self.black_castle[0] and valid_up_left and self.white_turn:
+            if (
+                self.player == "b"
+                and self.black_castle[0]
+                and valid_up_left
+                and self.white_turn
+            ):
                 moves.append(((0, 4, 0, 2), (0, 0, 0, 3)))
-            if self.player == "b" and self.black_castle[1] and valid_up_right and self.white_turn:
+            if (
+                self.player == "b"
+                and self.black_castle[1]
+                and valid_up_right
+                and self.white_turn
+            ):
                 moves.append(((0, 4, 0, 6), (0, 7, 0, 5)))
 
         return moves
@@ -704,10 +786,10 @@ class Chess:
     def check_castle(self, tiles_b, tiles_to_check, fig):
         is_valid = True
         tiles_between = [self.board[i][j] for i, j in tiles_b]
-        if len(set(tiles_between)) == 1 and tiles_between[0] == '.':
+        if len(set(tiles_between)) == 1 and tiles_between[0] == ".":
             for row, col in tiles_to_check:
                 temp_b = copy.deepcopy(self.board)
-                temp_b[7][4] = '.'
+                temp_b[7][4] = "."
                 temp_b[row][col] = fig
                 if self.is_king_attacked(temp_b, fig):
                     is_valid = False
@@ -717,7 +799,7 @@ class Chess:
         return is_valid
 
     def update_castle(self):
-        king_bot = self.board[7][4] 
+        king_bot = self.board[7][4]
         bot_left = self.board[7][0]
         bot_right = self.board[7][7]
 
@@ -725,36 +807,35 @@ class Chess:
         up_left = self.board[0][0]
         up_right = self.board[0][7]
 
-
-        if king_bot != 'k':
+        if king_bot != "k":
             if self.player == "w":
                 self.white_castle = [False, False]
             else:
                 self.black_castle = [False, False]
         else:
-            if bot_left != 'r':
+            if bot_left != "r":
                 if self.player == "w":
                     self.white_castle[0] = False
                 else:
                     self.black_castle[0] = False
-            if bot_right != 'r':
+            if bot_right != "r":
                 if self.player == "w":
                     self.white_castle[1] = False
                 else:
                     self.black_castle[1] = False
-        
-        if king_top != 'k':
+
+        if king_top != "k":
             if self.player != "w":
                 self.white_castle = [False, False]
             else:
                 self.black_castle = [False, False]
         else:
-            if up_left != 'r':
+            if up_left != "r":
                 if self.player != "w":
                     self.white_castle[0] = False
                 else:
                     self.black_castle[0] = False
-            if up_right != 'r':
+            if up_right != "r":
                 if self.player != "w":
                     self.white_castle[1] = False
                 else:
