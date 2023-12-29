@@ -1,6 +1,19 @@
 import copy
 import random
+import pygame
+import time
 
+
+# Constants
+WIDTH, HEIGHT = 800, 800  # Window size
+ROWS, COLS = 8, 8  # Chessboard dimensions
+SQUARE_SIZE = WIDTH // COLS
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+LIGHT_SQUARE = (238, 238, 210)  # Light square color
+DARK_SQUARE = (118, 150, 86)  # Dark square color
 
 class Chess:
     def __init__(self, player="w") -> None:
@@ -28,36 +41,109 @@ class Chess:
 
         self.close = False
 
-    def print_board(self, board):
-        """Function to print current board state"""
-        ascii_figures = {
-            "p": "\u265F",  # white
-            "r": "\u265C",
-            "n": "\u265E",
-            "b": "\u265D",
-            "q": "\u265B",
-            "k": "\u265A",
-            "P": "\u2659",  # black
-            "R": "\u2656",
-            "N": "\u2658",
-            "B": "\u2657",
-            "Q": "\u2655",
-            "K": "\u2654",
+    def main(self):
+        """Main logic"""
+        pygame.init()
+        win = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Chess")
+        self.load_pieces()
+
+        running = True
+
+        while running and not self.close:
+            self.draw_board(win, self.board)
+            pygame.display.update()
+            possible = self.all_possible_moves()
+            filtered_moves = self.filter_illegal_moves(possible)
+            filtered_moves.extend(self.generate_castle_moves())
+            if len(filtered_moves) >= 1:
+                random_move = random.choice(filtered_moves)
+                self.en_passant_target = None
+                if isinstance(random_move[0], tuple):
+                    for move in random_move:
+                        self.move(move)
+                else:
+                    if isinstance(random_move[-1], str):
+                        self.move(random_move, random_move[-1])
+                    else:
+                        self.move(random_move)
+                self.update_castle()
+            else:
+                self.close = True
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+                # Player makes a move based on mouse input
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    # Handle player move
+                    # This will include selecting a piece, choosing a destination, and then making the move
+                    pass
+
+            # Update the game state and redraw board and pieces
+            time.sleep(1)
+            self.draw_board(win, self.board)
+            pygame.display.update()
+
+        pygame.quit()
+
+    def draw_square(self, win, row, col):
+        """Draw a single square of the chessboard."""
+        rect = (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
+        color = LIGHT_SQUARE if (row + col) % 2 == 0 else DARK_SQUARE
+        pygame.draw.rect(win, color, rect)
+
+    def draw_board(self, win, board):
+        """Draw the chessboard and pieces."""
+        for row in range(ROWS):
+            for col in range(COLS):
+                self.draw_square(win, row, col)
+
+                piece = board[row][col]
+                if piece != ".":
+                    win.blit(self.piece_images[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
+
+    def load_pieces(self):
+        rook_img_b = pygame.image.load("Assets/rook_black.png").convert_alpha()
+        rook_img_b = pygame.transform.scale(rook_img_b, (SQUARE_SIZE, SQUARE_SIZE))
+        bishop_img_b = pygame.image.load("Assets/bishop_black.png").convert_alpha()
+        bishop_img_b = pygame.transform.scale(bishop_img_b, (SQUARE_SIZE, SQUARE_SIZE))
+        king_img_b = pygame.image.load("Assets/king_black.png").convert_alpha()
+        king_img_b = pygame.transform.scale(king_img_b, (SQUARE_SIZE, SQUARE_SIZE))
+        queen_img_b = pygame.image.load("Assets/queen_black.png").convert_alpha()
+        queen_img_b = pygame.transform.scale(queen_img_b, (SQUARE_SIZE, SQUARE_SIZE))
+        pawn_img_b = pygame.image.load("Assets/pawn_black.png").convert_alpha()
+        pawn_img_b = pygame.transform.scale(pawn_img_b, (SQUARE_SIZE, SQUARE_SIZE))
+        knight_img_b = pygame.image.load("Assets/knight_black.png").convert_alpha()
+        knight_img_b = pygame.transform.scale(knight_img_b, (SQUARE_SIZE, SQUARE_SIZE))
+
+        rook_img_w = pygame.image.load("Assets/rook_white.png").convert_alpha()
+        rook_img_w = pygame.transform.scale(rook_img_w, (SQUARE_SIZE, SQUARE_SIZE))
+        bishop_img_w = pygame.image.load("Assets/bishop_white.png").convert_alpha()
+        bishop_img_w = pygame.transform.scale(bishop_img_w, (SQUARE_SIZE, SQUARE_SIZE))
+        king_img_w = pygame.image.load("Assets/king_white.png").convert_alpha()
+        king_img_w = pygame.transform.scale(king_img_w, (SQUARE_SIZE, SQUARE_SIZE))
+        queen_img_w = pygame.image.load("Assets/queen_white.png").convert_alpha()
+        queen_img_w = pygame.transform.scale(queen_img_w, (SQUARE_SIZE, SQUARE_SIZE))
+        pawn_img_w = pygame.image.load("Assets/pawn_white.png").convert_alpha()
+        pawn_img_w = pygame.transform.scale(pawn_img_w, (SQUARE_SIZE, SQUARE_SIZE))
+        knight_img_w = pygame.image.load("Assets/knight_white.png").convert_alpha()
+        knight_img_w = pygame.transform.scale(knight_img_w, (SQUARE_SIZE, SQUARE_SIZE))
+
+        self.piece_images = {
+            "R": rook_img_b,
+            "N": knight_img_b,
+            "B": bishop_img_b,
+            "Q": queen_img_b,
+            "K": king_img_b,
+            "P": pawn_img_b,
+            "r": rook_img_w,
+            "n": knight_img_w,
+            "b": bishop_img_w,
+            "q": queen_img_w,
+            "k": king_img_w,
+            "p": pawn_img_w,
         }
-        ids = ["X"] + [str(i) for i in range(8)]
-        ids_row = " ".join(ids)
-        print("\n", ids_row)
-        count = 0
-        for row in board:
-            row_str = " ".join(
-                [
-                    ascii_figures[row[i]] if row[i] != "." else row[i]
-                    for i in range(len(row))
-                ]
-            )
-            print(str(count), row_str)
-            count += 1
-        print("\n")
 
     def read_position_from_fen(self, fen_string):
         current_row = 0
@@ -79,7 +165,6 @@ class Chess:
             if current_row >= 7 and current_col >= 8:
                 break
         side, castling, en_passant_target, _, _ = fen_string[i + 1 :].split()
-        # print(side, castling, en_passant_target)
         self.player = side
         self.white_turn = side == "w"
         self.black_castle = ["q" in castling, "k" in castling]
@@ -88,43 +173,6 @@ class Chess:
             col = ord(en_passant_target[0]) - ord("a")
             row = 8 - int(en_passant_target[1])
             self.en_passant_target = (col, row)
-
-    def main(self):
-        """Main logic"""
-        self.print_board(self.board)
-        example_pos = "7k/8/8/3pP3/8/8/8/7K w KQkq d6 0 1"
-        self.read_position_from_fen(example_pos)
-        self.print_board(self.board)
-        while not self.close:
-            possible = self.all_possible_moves()
-            filtered_moves = self.filter_illegal_moves(possible)
-            filtered_moves.extend(self.generate_castle_moves())
-            # append with castle moves if possible
-            # move = self.get_move()
-            # logic with player movement
-
-            # random moves
-            if len(filtered_moves) >= 1:
-                random_move = random.choice(filtered_moves)
-                self.en_passant_target = None
-                if isinstance(random_move[0], tuple):
-                    for move in random_move:
-                        self.move(move)
-                else:
-                    if isinstance(random_move[-1], str):
-                        self.move(random_move, random_move[-1])
-                    else:
-                        self.move(random_move)
-                self.update_castle()
-                input()
-                print("Possible moves(from_row, from_col, to_row, to_col):")
-                print("\n".join([str(item) for item in filtered_moves]))
-                print("Random move choosen:", random_move)
-                print("\nWhite turn!" if self.white_turn else "\nBlack turn!")
-                self.print_board(self.board)
-            else:
-                print("Game over")
-                self.close = True
 
     def get_move(self):
         """Get move from user
