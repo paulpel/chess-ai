@@ -44,7 +44,7 @@ dragged_piece_pos = (0, 0)  # Current position of the dragged piece
 selected_square = None  # The starting square of the dragged piece
 ai_fen_history = []
 # Load the pre-trained model
-chess_cnn = load_model("chess_model.h5")
+chess_cnn = load_model("my_chess_model.h5")
 
 # Ensure that your model is compiled after loading (you can use the same compile parameters)
 chess_cnn.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
@@ -227,10 +227,14 @@ def fen_to_tensor(fen):
 def create_model_input(possible_fens, current_fen, ai_fen_history):
     model_inputs = []
     for fen in possible_fens:
-        # Convert each FEN to tensor and stack them
+        # Convert each FEN to tensor and reshape them
         tensor_list = [fen_to_tensor(fen), fen_to_tensor(current_fen)] + [fen_to_tensor(fen) for fen in ai_fen_history]
-        model_input = np.stack(tensor_list, axis=0)
+        reshaped_tensors = [tensor.transpose(1, 2, 0) for tensor in tensor_list]  # Reshape each tensor
+
+        # Concatenate the reshaped tensors to get a shape of (8, 8, 70)
+        model_input = np.concatenate(reshaped_tensors, axis=2)
         model_inputs.append(model_input)
+
     return np.array(model_inputs)
 
 
