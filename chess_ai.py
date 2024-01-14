@@ -3,9 +3,10 @@ import chess
 import os
 from stockfish import Stockfish
 import time
+import random
 
 # Adjust the path to your Stockfish executable
-STOCKFISH_PATH = "/usr/local/bin/stockfish" # or the relevant path on your system
+STOCKFISH_PATH = r"C:\Users\pawel\Desktop\Chess\stockfish\stockfish-windows-x86-64.exe"
 
 stockfish = Stockfish(STOCKFISH_PATH)
 
@@ -39,6 +40,7 @@ dragging = False  # Flag to track if a piece is being dragged
 dragged_piece = None  # Store the piece being dragged
 dragged_piece_pos = (0, 0)  # Current position of the dragged piece
 selected_square = None  # The starting square of the dragged piece
+ai_fen_history = []
 
 
 # Load images
@@ -200,9 +202,18 @@ def draw_panel(screen, board, images, player_times, turn):
     )  # Adjust y_offset as needed
 
 
+def generate_possible_fens(board):
+    possible_fens = []
+    for move in board.legal_moves:
+        board_copy = board.copy(stack=False)
+        board_copy.push(move)
+        possible_fens.append(board_copy.fen())
+    return possible_fens
+
+
 # Main function
 def main():
-    global dragging, dragged_piece, dragged_piece_pos, selected_square
+    global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history
     screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
     screen.fill(BACKGROUND)
     pygame.display.set_caption("Chess")
@@ -255,9 +266,30 @@ def main():
             if not human_turn and current_time - last_move_time > move_delay:
                 stockfish.set_fen_position(board.fen())
                 best_move = stockfish.get_best_move()
-                if best_move:
-                    board.push(chess.Move.from_uci(best_move))
-                    last_move_time = current_time
+                while len(ai_fen_history) < 3:
+                    ai_fen_history.insert(0, chess.Board().fen())
+
+                # Generate possible FENs for the next AI moves
+                possible_fens = generate_possible_fens(board)
+
+                # Create a list for each possible move
+                model_inputs = []
+                for fen in possible_fens:
+                    model_input = [fen, board.fen()] + ai_fen_history
+                    model_inputs.append(model_input)
+                print(model_inputs)
+                # TODO: Use your model here to choose the best move
+                # Example: best_move = your_model.choose_best_move(model_inputs)
+                # For now, just making a random move as a placeholder
+                best_move = random.choice(list(board.legal_moves))
+
+                board.push(best_move)
+                last_move_time = current_time
+
+                # Update AI-specific FEN history
+                ai_fen_history.append(board.fen())
+                if len(ai_fen_history) > 3:  # Keep only the last 3 AI FEN states
+                    ai_fen_history.pop(0)
 
         draw_board(screen)
         draw_pieces(screen, images, board)

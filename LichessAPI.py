@@ -235,8 +235,8 @@ def create_stacked_set_from_game(game, color, stack_size=2, add_other_legal_move
             # Concatenate the selected tensors along the channel dimension
             # stacked_tensor = torch.cat(stack, dim=0)
             stacked_sets.append(stack)
-            # print(color, indexes)
-    print(len(stacked_sets))
+    #         # print(color, indexes)
+    # print(len(stacked_sets))
 
     # Generating possible positions from every move if add_other_legal_moves = True
     if add_other_legal_moves:
@@ -259,8 +259,8 @@ def create_stacked_set_from_game(game, color, stack_size=2, add_other_legal_move
                     new_stacked_sets.append(new_stacked_set)
                     target_values.append(0.0)
                     # print(i, j, new_stacked_set)
-        print(target_values)
-        return new_stacked_sets
+        # print(target_values)
+        return new_stacked_sets, target_values
     return stacked_sets
 
 
@@ -276,13 +276,17 @@ def get_games_as_a_set(games, colors, previous_moves=3, add_other_legal_moves=Tr
     """
 
     games_set = []
+    target_set = []
     for idx, game in enumerate(games):
-        stacked_game = create_stacked_set_from_game(
+        stacked_game, target_value = create_stacked_set_from_game(
             game, colors[idx], stack_size=previous_moves + 2, add_other_legal_moves=True
         )
         games_set.extend(stacked_game)
-    return games_set
+        target_set.extend(target_value)
+    return games_set, target_set
 
 
 fen_games, colors = get_games("chesstacion", 100)
-games = get_games_as_a_set(fen_games, colors, 3)
+games, target = get_games_as_a_set(fen_games, colors, 3)
+print(len(games), len(target))
+print(target)
