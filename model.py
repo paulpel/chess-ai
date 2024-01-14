@@ -1,61 +1,87 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Input, Dense, Conv2D, Flatten, LSTM, Concatenate
 from tensorflow.keras.models import Model
 from sklearn.model_selection import train_test_split
-from prep_data import extract_data_for_training, transform_data
+from tensorflow.keras.layers import Input, Conv2D, Dense, Flatten, MaxPooling2D, Concatenate
+from LichessAPI import get_games, get_games_as_a_set
+from tensor import ChessTensor
+import numpy as np
 
 
-def preprocess(N):
-    # Transforming data
-    white_data, black_data = extract_data_for_training('player_games.pgn')
-    X_white, y_white = transform_data(white_data, N)
-    X_black, y_black = transform_data(black_data, N)
+import tensorflow as tf
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, Dense, Flatten, MaxPooling2D, Concatenate, Lambda
 
-    # Splitting into training and testing sets
-    X_train_white, X_test_white, y_train_white, y_test_white = train_test_split(X_white, y_white, test_size=0.2, random_state=42)
-    X_train_black, X_test_black, y_train_black, y_test_black = train_test_split(X_black, y_black, test_size=0.2, random_state=42)
-    
-    return (X_train_white, X_test_white, y_train_white, y_test_white), (X_train_black, X_test_black, y_train_black, y_test_black)
+def create_chess_cnn():
+    # Define the input shape: 5 tensors each of shape (14, 8, 8)
+    input_shape = (5, 14, 8, 8)
 
+    # Input layer
+    input_layer = Input(shape=input_shape)
 
-def build_model(num_possible_moves, N):
-    # Assuming board states are transformed to 8x8x1 matrices and moves to 3xN arrays
-    num_possible_moves = 5000  # This is a simplification
+    # Process each 8x8 board state separately
+    conv_layers = []
+    for i in range(5):
+        # Extract the ith board state using a Lambda layer
+        board_state = Lambda(lambda x: x[:, i, :, :, :])(input_layer)
 
-    # CNN for board state
-    board_input = Input(shape=(8, 8, 1))  # Change dimensions based on your encoding
-    cnn = Conv2D(64, kernel_size=3, activation='relu')(board_input)
-    cnn = Conv2D(64, kernel_size=3, activation='relu')(cnn)
-    cnn = Flatten()(cnn)
+        # First convolutional layer for this board state
+        conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(board_state)
+        pool1 = MaxPooling2D((2, 2))(conv1)
 
-    # LSTM for move history
-    move_input = Input(shape=(3, N))  # N depends on your move encoding
-    lstm = LSTM(64)(move_input)
+        # Second convolutional layer
+        conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(pool1)
+        pool2 = MaxPooling2D((2, 2))(conv2)
 
-    # Concatenate and final dense layers
-    combined = Concatenate()([cnn, lstm])
-    dense = Dense(128, activation='relu')(combined)
-    output = Dense(num_possible_moves, activation='softmax')(dense)  # num_possible_moves is the number of possible move outputs
+        # Flatten the output
+        flatten = Flatten()(pool2)
 
-    model = Model(inputs=[board_input, move_input], outputs=output)
+        # Append the flattened output to the list
+        conv_layers.append(flatten)
 
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    # Concatenate the outputs from each board state
+    concatenated = Concatenate()(conv_layers)
+
+    # Dense layers
+    dense1 = Dense(128, activation='relu')(concatenated)
+    dense2 = Dense(64, activation='relu')(dense1)
+
+    # Output layer
+    output = Dense(1, activation='sigmoid')(dense2)
+
+    # Create the model
+    model = Model(inputs=input_layer, outputs=output)
+
+    # Compile the model
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
     return model
 
 
 if __name__ == "__main__":
-    N = 3  # or the correct value based on your move encoding
-    num_possible_moves = 5000  # Adjust based on actual number of possible moves
+    fen_games, colors = get_games("chesstacion", 100)
+    fen_positions, target = get_games_as_a_set(fen_games, colors, 3)
 
-    (white_train, white_test, white_train_labels, white_test_labels), \
-    (black_train, black_test, black_train_labels, black_test_labels) = preprocess(N)
+    chess_tensor = ChessTensor()
+    tensors = []
+    for position in fen_positions:
+        temp = []
+        for board in position:
+            chess_tensor.parse_fen(board)
+            tensor = chess_tensor.get_tensor()
+            temp.append(tensor)
+        tensors.append(temp)
+        # Convert each list of tensors into a single 4D tensor and stack them
+    X = np.stack([np.stack(sample, axis=0) for sample in tensors])
+    y = np.array(target)  # Assuming 'target' is already a list of labels
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    white_model = build_model(num_possible_moves, N)
-    black_model = build_model(num_possible_moves, N)
+    # Create the CNN model
+    chess_cnn = create_chess_cnn()
 
-    # Train models
-    white_model.fit(white_train, white_train_labels, validation_data=(white_test, white_test_labels), epochs=10, batch_size=32)
-    black_model.fit(black_train, black_train_labels, validation_data=(black_test, black_test_labels), epochs=10, batch_size=32)
+    # Summary of the model
+    chess_cnn.summary()
+    # Train the model
+    history = chess_cnn.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_val, y_val))
+    model_path = "my_chess_model.h5"  # Change the path as needed
+    chess_cnn.save(model_path)
 
-    white_model.save('white_chess_model')
-    black_model.save('black_chess_model')

@@ -3,7 +3,9 @@ import chess
 import os
 from stockfish import Stockfish
 import time
-import random
+from tensor import ChessTensor
+import numpy as np
+from tensorflow.keras.models import load_model
 
 # Adjust the path to your Stockfish executable
 STOCKFISH_PATH = r"C:\Users\pawel\Desktop\Chess\stockfish\stockfish-windows-x86-64.exe"
@@ -41,6 +43,11 @@ dragged_piece = None  # Store the piece being dragged
 dragged_piece_pos = (0, 0)  # Current position of the dragged piece
 selected_square = None  # The starting square of the dragged piece
 ai_fen_history = []
+# Load the pre-trained model
+chess_cnn = load_model("chess_model.h5")
+
+# Ensure that your model is compiled after loading (you can use the same compile parameters)
+chess_cnn.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 
 # Load images
@@ -211,6 +218,27 @@ def generate_possible_fens(board):
     return possible_fens
 
 
+def fen_to_tensor(fen):
+    chess_tensor = ChessTensor()
+    chess_tensor.parse_fen(fen)
+    return chess_tensor.get_tensor()
+
+
+def create_model_input(possible_fens, current_fen, ai_fen_history):
+    model_inputs = []
+    for fen in possible_fens:
+        # Convert each FEN to tensor and stack them
+        tensor_list = [fen_to_tensor(fen), fen_to_tensor(current_fen)] + [fen_to_tensor(fen) for fen in ai_fen_history]
+        model_input = np.stack(tensor_list, axis=0)
+        model_inputs.append(model_input)
+    return np.array(model_inputs)
+
+
+def choose_best_move(model, model_inputs):
+    predictions = model.predict(model_inputs)
+    best_move_index = np.argmax(predictions)  # Choose the move with the highest score
+    return best_move_index
+
 # Main function
 def main():
     global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history
@@ -272,16 +300,11 @@ def main():
                 # Generate possible FENs for the next AI moves
                 possible_fens = generate_possible_fens(board)
 
-                # Create a list for each possible move
-                model_inputs = []
-                for fen in possible_fens:
-                    model_input = [fen, board.fen()] + ai_fen_history
-                    model_inputs.append(model_input)
-                print(model_inputs)
-                # TODO: Use your model here to choose the best move
-                # Example: best_move = your_model.choose_best_move(model_inputs)
-                # For now, just making a random move as a placeholder
-                best_move = random.choice(list(board.legal_moves))
+                # Prepare model inputs
+                model_inputs = create_model_input(possible_fens, board.fen(), ai_fen_history)
+                # Use your model to choose the best move
+                best_move_index = choose_best_move(chess_cnn, model_inputs)
+                best_move = list(board.legal_moves)[best_move_index]
 
                 board.push(best_move)
                 last_move_time = current_time
