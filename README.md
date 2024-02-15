@@ -7,10 +7,6 @@ The project involves creating a chess engine, downloading game histories of targ
 preprocessing the data, building a model architecture, and training the model. 
 Future plans include exploring transfer learning on the Maia model.
 
-Installation:
-git clone https://github.com/paulpel/Chess.git
-cd Chess
-
 Features:
 - Chess engine implementation from scratch
 - Player mimic model based on game history
