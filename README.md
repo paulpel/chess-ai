@@ -1,6 +1,5 @@
 Chess Project
 
-Description:
 The Chess project is aimed at implementing the game of chess from scratch, 
 followed by the development of a model to mimic specific players based on their game history. 
 The project involves creating a chess engine, downloading game histories of targeted players, 
