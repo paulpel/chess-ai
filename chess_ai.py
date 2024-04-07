@@ -1,16 +1,10 @@
 import pygame
 import chess
 import os
-from stockfish import Stockfish
 import time
 from tensor import ChessTensor
 import numpy as np
 from tensorflow.keras.models import load_model
-
-# Adjust the path to your Stockfish executable
-STOCKFISH_PATH = r"C:\Users\pawel\Desktop\Chess\stockfish\stockfish-windows-x86-64.exe"
-
-stockfish = Stockfish(STOCKFISH_PATH)
 
 # Initialize Pygame
 pygame.init()
@@ -243,6 +237,16 @@ def choose_best_move(model, model_inputs):
     best_move_index = np.argmax(predictions)  # Choose the move with the highest score
     return best_move_index
 
+# Function to generate a move, including promotion if applicable
+def generate_move_with_promotion(from_square, to_square, board):
+    # Check if the move is a pawn reaching the last rank
+    if board.piece_at(from_square).piece_type == chess.PAWN:
+        if to_square in chess.SQUARES[0:8] or to_square in chess.SQUARES[56:64]:
+            # Create a move with promotion to Queen
+            return chess.Move(from_square, to_square, promotion=chess.QUEEN)
+    # Return a regular move if not a promotion scenario
+    return chess.Move(from_square, to_square)
+
 # Main function
 def main():
     global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history
@@ -291,13 +295,11 @@ def main():
                 elif event.type == pygame.MOUSEBUTTONUP and dragging:
                     dragging = False
                     target_square = get_square_from_mouse(pygame.mouse.get_pos())
-                    move = chess.Move(selected_square, target_square)
+                    move = generate_move_with_promotion(selected_square, target_square, board)
                     if move in board.legal_moves:
                         board.push(move)
                     selected_square = None
             if not human_turn and current_time - last_move_time > move_delay:
-                stockfish.set_fen_position(board.fen())
-                best_move = stockfish.get_best_move()
                 while len(ai_fen_history) < 3:
                     ai_fen_history.insert(0, chess.Board().fen())
 
