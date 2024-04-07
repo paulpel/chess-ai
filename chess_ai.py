@@ -374,8 +374,6 @@ def main():
                     game_state = check_game_state(board)
                     if game_state != "ongoing":
                         display_endgame_message(screen, game_state)
-                        # After displaying the end game message, you might want to break out of the loop
-                        # or offer a restart option here. For now, let's just wait a few seconds and then break
                         pygame.time.wait(5000)  # Wait for 5000 milliseconds = 5 seconds
                         break  # This exits the main game loop
 
@@ -403,8 +401,6 @@ def main():
                 game_state = check_game_state(board)
                 if game_state != "ongoing":
                     display_endgame_message(screen, game_state)
-                    # After displaying the end game message, you might want to break out of the loop
-                    # or offer a restart option here. For now, let's just wait a few seconds and then break
                     pygame.time.wait(5000)  # Wait for 5000 milliseconds = 5 seconds
                     break  # This exits the main game loop
 
