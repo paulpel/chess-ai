@@ -278,6 +278,29 @@ def get_promotion_choice(option_positions, mouse_x, mouse_y):
             return [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT][i]
     return None
 
+def check_game_state(board):
+    if board.is_checkmate():
+        return "checkmate"
+    elif board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.can_claim_threefold_repetition():
+        return "draw"
+    return "ongoing"
+
+def display_endgame_message(screen, game_state):
+    font = pygame.font.Font(None, 48)
+    if game_state == "checkmate":
+        text = "Checkmate!"
+    elif game_state == "draw":
+        text = "Draw!"
+    else:
+        return  # No need to display anything if the game is ongoing
+
+    text_surface = font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect(center=(TOTAL_WIDTH // 2, TOTAL_HEIGHT // 2))
+    screen.blit(text_surface, text_rect)
+    pygame.display.flip()
+    # Give some time to see the message before closing or resetting the game
+    time.sleep(5)
+
 # Main function
 def main():
     global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history
@@ -347,6 +370,15 @@ def main():
                         if move in board.legal_moves:
                             board.push(move)
                     selected_square = None
+                    # After a move is made, either by a human or the AI
+                    game_state = check_game_state(board)
+                    if game_state != "ongoing":
+                        display_endgame_message(screen, game_state)
+                        # After displaying the end game message, you might want to break out of the loop
+                        # or offer a restart option here. For now, let's just wait a few seconds and then break
+                        pygame.time.wait(5000)  # Wait for 5000 milliseconds = 5 seconds
+                        break  # This exits the main game loop
+
             if not human_turn and current_time - last_move_time > move_delay:
                 while len(ai_fen_history) < 3:
                     ai_fen_history.insert(0, chess.Board().fen())
@@ -367,6 +399,15 @@ def main():
                 ai_fen_history.append(board.fen())
                 if len(ai_fen_history) > 3:  # Keep only the last 3 AI FEN states
                     ai_fen_history.pop(0)
+                # After a move is made, either by a human or the AI
+                game_state = check_game_state(board)
+                if game_state != "ongoing":
+                    display_endgame_message(screen, game_state)
+                    # After displaying the end game message, you might want to break out of the loop
+                    # or offer a restart option here. For now, let's just wait a few seconds and then break
+                    pygame.time.wait(5000)  # Wait for 5000 milliseconds = 5 seconds
+                    break  # This exits the main game loop
+
 
         draw_board(screen)
         draw_pieces(screen, images, board)
