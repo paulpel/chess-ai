@@ -237,15 +237,46 @@ def choose_best_move(model, model_inputs):
     best_move_index = np.argmax(predictions)  # Choose the move with the highest score
     return best_move_index
 
-# Function to generate a move, including promotion if applicable
-def generate_move_with_promotion(from_square, to_square, board):
-    # Check if the move is a pawn reaching the last rank
-    if board.piece_at(from_square).piece_type == chess.PAWN:
-        if to_square in chess.SQUARES[0:8] or to_square in chess.SQUARES[56:64]:
-            # Create a move with promotion to Queen
-            return chess.Move(from_square, to_square, promotion=chess.QUEEN)
-    # Return a regular move if not a promotion scenario
-    return chess.Move(from_square, to_square)
+def generate_move_with_promotion(from_square, to_square, promotion_piece):
+    # Creates a chess move with the specified promotion piece
+    return chess.Move(from_square, to_square, promotion=promotion_piece)
+
+def show_promotion_gui(screen, color):
+    panel_width, panel_height = 280, 80  # Increased size for better visibility
+    panel_x = (BOARD_SIZE - panel_width) // 2
+    panel_y = (BOARD_SIZE - panel_height) // 2
+
+    # Highlight the background to make it more distinct
+    background_color = (100, 100, 100)  # A darker shade to contrast with the options
+    pygame.draw.rect(screen, background_color, [panel_x, panel_y, panel_width, panel_height])
+
+    # Adding an instruction text above the options
+    font = pygame.font.Font(None, 32)
+    text = font.render("Choose Promotion:", True, WHITE)
+    text_rect = text.get_rect(center=(panel_x + panel_width // 2, panel_y - 20))
+    screen.blit(text, text_rect)
+
+    options = ['Q', 'R', 'B', 'N']  # Promotion options
+    option_positions = []
+    images, _ = load_images()  # Assuming this function returns the images
+    option_gap = 10  # Gap between options for better spacing
+    option_width = (panel_width - (len(options) + 1) * option_gap) // len(options)
+    for i, option in enumerate(options):
+        img = images[color + option]
+        img_x = panel_x + i * (option_width + option_gap) + option_gap
+        img_y = panel_y + (panel_height - img.get_height()) // 2  # Vertically center
+        screen.blit(img, (img_x, img_y))
+        option_positions.append((img_x, img_y, img.get_width(), img.get_height()))
+
+    pygame.display.flip()
+    return option_positions  # Return positions to enable click detection
+
+
+def get_promotion_choice(option_positions, mouse_x, mouse_y):
+    for i, (x, y, width, height) in enumerate(option_positions):
+        if x <= mouse_x <= x + width and y <= mouse_y <= y + height:
+            return [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT][i]
+    return None
 
 # Main function
 def main():
@@ -292,12 +323,29 @@ def main():
                         dragged_piece_pos = pygame.mouse.get_pos()
                         dragging = True
 
-                elif event.type == pygame.MOUSEBUTTONUP and dragging:
+                if event.type == pygame.MOUSEBUTTONUP and dragging:
                     dragging = False
-                    target_square = get_square_from_mouse(pygame.mouse.get_pos())
-                    move = generate_move_with_promotion(selected_square, target_square, board)
-                    if move in board.legal_moves:
-                        board.push(move)
+                    to_square = get_square_from_mouse(pygame.mouse.get_pos())
+                    piece = board.piece_at(selected_square)
+                    if piece and piece.piece_type == chess.PAWN and (to_square in chess.SQUARES[0:8] or to_square in chess.SQUARES[56:64]):
+                        # Pawn reaches promotion rank
+                        color = 'w' if piece.color == chess.WHITE else 'b'
+                        option_positions = show_promotion_gui(screen, color)
+                        promotion_piece = None
+                        while promotion_piece is None:
+                            for event in pygame.event.get():
+                                if event.type == pygame.MOUSEBUTTONDOWN:
+                                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                                    promotion_piece = get_promotion_choice(option_positions, mouse_x, mouse_y)
+                                    if promotion_piece:
+                                        move = generate_move_with_promotion(selected_square, to_square, promotion_piece)
+                                        if move in board.legal_moves:
+                                            board.push(move)
+                                        break
+                    else:
+                        move = chess.Move(selected_square, to_square)
+                        if move in board.legal_moves:
+                            board.push(move)
                     selected_square = None
             if not human_turn and current_time - last_move_time > move_delay:
                 while len(ai_fen_history) < 3:
