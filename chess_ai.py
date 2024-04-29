@@ -2,9 +2,10 @@ import pygame
 import chess
 import os
 import time
-from tensor import ChessTensor
+from tensor import generate_full_input_tensor
 import numpy as np
 from tensorflow.keras.models import load_model
+from print_tensor import describe_and_print_tensor
 
 # Initialize Pygame
 pygame.init()
@@ -39,12 +40,12 @@ NON_SELECTED_ITEM_COLOR = (244, 255, 253)  # Sky blue color for non-selected ite
 # Global variables to store player settings
 play_mode = "AI"  # Other option is 'Human'
 player_color = "White"  # Other option is 'Black'
+ai_board_history = []
 
 dragging = False  # Flag to track if a piece is being dragged
 dragged_piece = None  # Store the piece being dragged
 dragged_piece_pos = (0, 0)  # Current position of the dragged piece
 selected_square = None  # The starting square of the dragged piece
-ai_fen_history = []
 # Load the pre-trained model
 chess_cnn = load_model("my_chess_model.h5")
 
@@ -220,30 +221,6 @@ def generate_possible_fens(board):
     return possible_fens
 
 
-def fen_to_tensor(fen):
-    chess_tensor = ChessTensor()
-    chess_tensor.parse_fen(fen)
-    return chess_tensor.get_tensor()
-
-
-def create_model_input(possible_fens, current_fen, ai_fen_history):
-    model_inputs = []
-    for fen in possible_fens:
-        # Convert each FEN to tensor and reshape them
-        tensor_list = [fen_to_tensor(fen), fen_to_tensor(current_fen)] + [
-            fen_to_tensor(fen) for fen in ai_fen_history
-        ]
-        reshaped_tensors = [
-            tensor.transpose(1, 2, 0) for tensor in tensor_list
-        ]  # Reshape each tensor
-
-        # Concatenate the reshaped tensors to get a shape of (8, 8, 70)
-        model_input = np.concatenate(reshaped_tensors, axis=2)
-        model_inputs.append(model_input)
-
-    return np.array(model_inputs)
-
-
 def choose_best_move(model, model_inputs):
     predictions = model.predict(model_inputs)
     best_move_index = np.argmax(predictions)  # Choose the move with the highest score
@@ -406,14 +383,14 @@ def show_options(screen, font, background_image):
             else:
                 color = NON_SELECTED_ITEM_COLOR  # Light grey for non-selected items
                 shadow_color = (0, 0, 0)  # Black for shadow
-            
+
             # Central position for the text
             x = TOTAL_WIDTH // 2
             y = 150 + index * 50
             # Adjust text alignment if necessary
             text_surface = font.render(option, True, color)
             text_rect = text_surface.get_rect(center=(x, y))
-            
+
             draw_text_with_shadow(screen, option, font, color, shadow_color, text_rect.topleft)
 
         pygame.display.flip()
@@ -443,8 +420,15 @@ def show_options(screen, font, background_image):
         pygame.time.wait(100)
 
 
+def make_move(board, move):
+    board.push(move)
+    ai_board_history.append(board.copy())
+    tensor = generate_full_input_tensor(board, ai_board_history[-7:])
+    describe_and_print_tensor(tensor)
+
+
 def main():
-    global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history, play_mode, player_color
+    global dragging, dragged_piece, dragged_piece_pos, selected_square, play_mode, player_color
     screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
     pygame.display.set_caption("Chess")
     font = pygame.font.Font(None, 36)
@@ -471,7 +455,7 @@ def main():
 def start_game(mode, color):
     # Initialize game setup based on selected mode and color
     # Set AI or human player settings based on 'mode' and 'color'
-    global WHITE_IS_HUMAN, BLACK_IS_HUMAN
+    global ai_board_history, WHITE_IS_HUMAN, BLACK_IS_HUMAN
     if mode == "AI":
         if color == "White":
             WHITE_IS_HUMAN = True
@@ -482,7 +466,7 @@ def start_game(mode, color):
     else:
         WHITE_IS_HUMAN = True
         BLACK_IS_HUMAN = True
-    global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history
+    global dragging, dragged_piece, dragged_piece_pos, selected_square
     pygame.init()
     screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
     font = pygame.font.Font(None, 36)  # Use the same font for the menu
@@ -507,6 +491,7 @@ def start_game(mode, color):
     clock = pygame.time.Clock()
     images, small_images = load_images()
     board = chess.Board()
+    ai_board_history.append(board.copy())
 
     last_move_time = 0
     move_delay = 0.5  # 1 second delay between moves
@@ -571,12 +556,12 @@ def start_game(mode, color):
                                             selected_square, to_square, promotion_piece
                                         )
                                         if move in board.legal_moves:
-                                            board.push(move)
+                                            make_move(board, move)
                                         break
                     else:
                         move = chess.Move(selected_square, to_square)
                         if move in board.legal_moves:
-                            board.push(move)
+                            make_move(board, move)
                     selected_square = None
                     # After a move is made, either by a human or the AI
                     game_state = check_game_state(board)
@@ -586,28 +571,12 @@ def start_game(mode, color):
                         break  # This exits the main game loop
 
             if not human_turn and current_time - last_move_time > move_delay:
-                while len(ai_fen_history) < 3:
-                    ai_fen_history.insert(0, chess.Board().fen())
-
+                # TO DO
+                pass
                 # Generate possible FENs for the next AI moves
                 possible_fens = generate_possible_fens(board)
 
-                # Prepare model inputs
-                model_inputs = create_model_input(
-                    possible_fens, board.fen(), ai_fen_history
-                )
-                # Use your model to choose the best move
-                best_move_index = choose_best_move(chess_cnn, model_inputs)
-                best_move = list(board.legal_moves)[best_move_index]
-
-                board.push(best_move)
-                last_move_time = current_time
-
-                # Update AI-specific FEN history
-                ai_fen_history.append(board.fen())
-                if len(ai_fen_history) > 3:  # Keep only the last 3 AI FEN states
-                    ai_fen_history.pop(0)
-                # After a move is made, either by a human or the AI
+                                # After a move is made, either by a human or the AI
                 game_state = check_game_state(board)
                 if game_state != "ongoing":
                     display_endgame_message(screen, game_state)
