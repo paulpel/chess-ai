@@ -422,8 +422,8 @@ def show_options(screen, font, background_image):
 
 def make_move(board, move):
     board.push(move)
-    ai_board_history.append(board.copy())
     tensor = generate_full_input_tensor(board, ai_board_history[-7:])
+    ai_board_history.append(board.copy())
     describe_and_print_tensor(tensor)
 
 
