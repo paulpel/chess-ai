@@ -32,6 +32,14 @@ BACKGROUND = (73, 57, 44)
 WHITE_IS_HUMAN = True
 BLACK_IS_HUMAN = False
 
+# Define your custom colors
+SELECTED_ITEM_COLOR = (255, 215, 0)  # Gold color for selected items
+NON_SELECTED_ITEM_COLOR = (135, 206, 250)  # Sky blue color for non-selected items
+
+# Global variables to store player settings
+play_mode = "AI"  # Other option is 'Human'
+player_color = "White"  # Other option is 'Black'
+
 dragging = False  # Flag to track if a piece is being dragged
 dragged_piece = None  # Store the piece being dragged
 dragged_piece_pos = (0, 0)  # Current position of the dragged piece
@@ -41,7 +49,7 @@ ai_fen_history = []
 chess_cnn = load_model("my_chess_model.h5")
 
 # Ensure that your model is compiled after loading (you can use the same compile parameters)
-chess_cnn.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+chess_cnn.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
 
 
 # Load images
@@ -222,8 +230,12 @@ def create_model_input(possible_fens, current_fen, ai_fen_history):
     model_inputs = []
     for fen in possible_fens:
         # Convert each FEN to tensor and reshape them
-        tensor_list = [fen_to_tensor(fen), fen_to_tensor(current_fen)] + [fen_to_tensor(fen) for fen in ai_fen_history]
-        reshaped_tensors = [tensor.transpose(1, 2, 0) for tensor in tensor_list]  # Reshape each tensor
+        tensor_list = [fen_to_tensor(fen), fen_to_tensor(current_fen)] + [
+            fen_to_tensor(fen) for fen in ai_fen_history
+        ]
+        reshaped_tensors = [
+            tensor.transpose(1, 2, 0) for tensor in tensor_list
+        ]  # Reshape each tensor
 
         # Concatenate the reshaped tensors to get a shape of (8, 8, 70)
         model_input = np.concatenate(reshaped_tensors, axis=2)
@@ -237,9 +249,11 @@ def choose_best_move(model, model_inputs):
     best_move_index = np.argmax(predictions)  # Choose the move with the highest score
     return best_move_index
 
+
 def generate_move_with_promotion(from_square, to_square, promotion_piece):
     # Creates a chess move with the specified promotion piece
     return chess.Move(from_square, to_square, promotion=promotion_piece)
+
 
 def show_promotion_gui(screen, color):
     panel_width, panel_height = 280, 80  # Increased size for better visibility
@@ -248,7 +262,9 @@ def show_promotion_gui(screen, color):
 
     # Highlight the background to make it more distinct
     background_color = (100, 100, 100)  # A darker shade to contrast with the options
-    pygame.draw.rect(screen, background_color, [panel_x, panel_y, panel_width, panel_height])
+    pygame.draw.rect(
+        screen, background_color, [panel_x, panel_y, panel_width, panel_height]
+    )
 
     # Adding an instruction text above the options
     font = pygame.font.Font(None, 32)
@@ -256,7 +272,7 @@ def show_promotion_gui(screen, color):
     text_rect = text.get_rect(center=(panel_x + panel_width // 2, panel_y - 20))
     screen.blit(text, text_rect)
 
-    options = ['Q', 'R', 'B', 'N']  # Promotion options
+    options = ["Q", "R", "B", "N"]  # Promotion options
     option_positions = []
     images, _ = load_images()  # Assuming this function returns the images
     option_gap = 10  # Gap between options for better spacing
@@ -278,12 +294,19 @@ def get_promotion_choice(option_positions, mouse_x, mouse_y):
             return [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT][i]
     return None
 
+
 def check_game_state(board):
     if board.is_checkmate():
         return "checkmate"
-    elif board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.can_claim_threefold_repetition():
+    elif (
+        board.is_stalemate()
+        or board.is_insufficient_material()
+        or board.can_claim_fifty_moves()
+        or board.can_claim_threefold_repetition()
+    ):
         return "draw"
     return "ongoing"
+
 
 def display_endgame_message(screen, game_state):
     font = pygame.font.Font(None, 48)
@@ -301,9 +324,157 @@ def display_endgame_message(screen, game_state):
     # Give some time to see the message before closing or resetting the game
     time.sleep(5)
 
-# Main function
+
+def load_background():
+    background_image = pygame.image.load("bg.png")
+    # Optionally scale the image to fit your screen size
+    background_image = pygame.transform.scale(
+        background_image, (TOTAL_WIDTH, TOTAL_HEIGHT)
+    )
+    return background_image
+
+
+def show_menu(screen, font, background_image):
+    menu_items = ["Play", "Options", "Quit"]
+    selected_index = 0
+
+    def draw_menu():
+        screen.blit(background_image, (0, 0))  # Blit the background image
+
+        for index, item in enumerate(menu_items):
+            if index == selected_index:
+                color = SELECTED_ITEM_COLOR
+            else:
+                color = NON_SELECTED_ITEM_COLOR
+
+            label = font.render(item, True, color)
+            label_rect = label.get_rect(center=(TOTAL_WIDTH // 2, 150 + index * 50))
+            screen.blit(label, label_rect)
+
+        pygame.display.flip()
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "Quit"
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_index = (selected_index - 1) % len(menu_items)
+                elif event.key == pygame.K_DOWN:
+                    selected_index = (selected_index + 1) % len(menu_items)
+                elif event.key == pygame.K_RETURN:
+                    return menu_items[selected_index]
+
+        draw_menu()
+
+    return "Quit"
+
+
+def show_options(screen, font, background_image):
+    global play_mode, player_color
+    options_menu = ["Play Mode: " + play_mode, "Player Color: " + player_color, "Back"]
+    selected_index = 0
+
+    def draw_options():
+        screen.fill(BACKGROUND)  # Clear the screen if background is not opaque
+        screen.blit(background_image, (0, 0))  # Blit the background image
+
+        for index, option in enumerate(options_menu):
+            if index == selected_index:
+                color = SELECTED_ITEM_COLOR
+            else:
+                color = NON_SELECTED_ITEM_COLOR
+
+            label = font.render(option, True, color)
+            label_rect = label.get_rect(center=(TOTAL_WIDTH // 2, 150 + index * 50))
+            screen.blit(label, label_rect)
+
+        pygame.display.flip()
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "Quit"
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_index = (selected_index - 1) % len(options_menu)
+                elif event.key == pygame.K_DOWN:
+                    selected_index = (selected_index + 1) % len(options_menu)
+                elif event.key == pygame.K_RETURN:
+                    if selected_index == 0:
+                        play_mode = "AI" if play_mode == "Human" else "Human"
+                        options_menu[selected_index] = "Play Mode: " + play_mode
+                    elif selected_index == 1:
+                        player_color = "White" if player_color == "Black" else "Black"
+                        options_menu[selected_index] = "Player Color: " + player_color
+                    elif selected_index == 2:
+                        return
+
+        draw_options()
+
+    return "Quit"
+
+
 def main():
+    global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history, play_mode, player_color
+    screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
+    pygame.display.set_caption("Chess")
+    font = pygame.font.Font(None, 36)
+    background_image = (
+        load_background()
+    )  # Ensure this function loads your background image correctly
+
+    while True:
+        menu_selection = show_menu(screen, font, background_image)
+        if menu_selection == "Quit":
+            pygame.quit()
+            break
+        elif menu_selection == "Play":
+            # Function to start the game
+            start_game(play_mode, player_color)
+        elif menu_selection == "Options":
+            # Function to show options, now with background
+            show_options(screen, font, background_image)
+
+        # Redisplay menu after coming back from other screens
+        menu_selection = show_menu(screen, font, background_image)
+
+
+def start_game(mode, color):
+    # Initialize game setup based on selected mode and color
+    # Set AI or human player settings based on 'mode' and 'color'
+    global WHITE_IS_HUMAN, BLACK_IS_HUMAN
+    if mode == "AI":
+        if color == "White":
+            WHITE_IS_HUMAN = True
+            BLACK_IS_HUMAN = False
+        else:
+            WHITE_IS_HUMAN = False
+            BLACK_IS_HUMAN = True
+    else:
+        WHITE_IS_HUMAN = True
+        BLACK_IS_HUMAN = True
     global dragging, dragged_piece, dragged_piece_pos, selected_square, ai_fen_history
+    pygame.init()
+    screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
+    font = pygame.font.Font(None, 36)  # Use the same font for the menu
+
+    background_image = load_background()
+    menu_selection = show_menu(screen, font, background_image)
+    if menu_selection == "Quit":
+        pygame.quit()
+        return
+    elif menu_selection == "Play":
+        # Proceed to the main game loop
+        pass  # Here the rest of your main game loop starts
+    elif menu_selection == "History":
+        # You would add your history handling here
+        pass
+    elif menu_selection == "Options":
+        # Options handling can be added here
+        pass
     screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
     screen.fill(BACKGROUND)
     pygame.display.set_caption("Chess")
@@ -350,18 +521,29 @@ def main():
                     dragging = False
                     to_square = get_square_from_mouse(pygame.mouse.get_pos())
                     piece = board.piece_at(selected_square)
-                    if piece and piece.piece_type == chess.PAWN and (to_square in chess.SQUARES[0:8] or to_square in chess.SQUARES[56:64]):
+                    if (
+                        piece
+                        and piece.piece_type == chess.PAWN
+                        and (
+                            to_square in chess.SQUARES[0:8]
+                            or to_square in chess.SQUARES[56:64]
+                        )
+                    ):
                         # Pawn reaches promotion rank
-                        color = 'w' if piece.color == chess.WHITE else 'b'
+                        color = "w" if piece.color == chess.WHITE else "b"
                         option_positions = show_promotion_gui(screen, color)
                         promotion_piece = None
                         while promotion_piece is None:
                             for event in pygame.event.get():
                                 if event.type == pygame.MOUSEBUTTONDOWN:
                                     mouse_x, mouse_y = pygame.mouse.get_pos()
-                                    promotion_piece = get_promotion_choice(option_positions, mouse_x, mouse_y)
+                                    promotion_piece = get_promotion_choice(
+                                        option_positions, mouse_x, mouse_y
+                                    )
                                     if promotion_piece:
-                                        move = generate_move_with_promotion(selected_square, to_square, promotion_piece)
+                                        move = generate_move_with_promotion(
+                                            selected_square, to_square, promotion_piece
+                                        )
                                         if move in board.legal_moves:
                                             board.push(move)
                                         break
@@ -385,7 +567,9 @@ def main():
                 possible_fens = generate_possible_fens(board)
 
                 # Prepare model inputs
-                model_inputs = create_model_input(possible_fens, board.fen(), ai_fen_history)
+                model_inputs = create_model_input(
+                    possible_fens, board.fen(), ai_fen_history
+                )
                 # Use your model to choose the best move
                 best_move_index = choose_best_move(chess_cnn, model_inputs)
                 best_move = list(board.legal_moves)[best_move_index]
@@ -403,7 +587,6 @@ def main():
                     display_endgame_message(screen, game_state)
                     pygame.time.wait(5000)  # Wait for 5000 milliseconds = 5 seconds
                     break  # This exits the main game loop
-
 
         draw_board(screen)
         draw_pieces(screen, images, board)
