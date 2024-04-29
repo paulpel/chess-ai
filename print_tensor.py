@@ -25,8 +25,9 @@ def describe_and_print_tensor(tensor):
     
     # 50-move rule counter (assumed to be unused and set to zeros)
     descriptions.append("50-move rule counter (unused, always zeros)")
-
-    assert len(descriptions) == 110, "Mismatch between descriptions and tensor layers."
+    descriptions.append("???")
+    descriptions.append("???")
+    assert len(descriptions) == 112, "Mismatch between descriptions and tensor layers."
 
     # Print each layer with its description
     for index, description in enumerate(descriptions):

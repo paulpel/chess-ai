@@ -28,7 +28,7 @@ class ChessTensor:
 
 def generate_full_input_tensor(board, history):
     print(len(history))
-    full_tensor = np.zeros((110, 8, 8), dtype=int)
+    full_tensor = np.zeros((112, 8, 8), dtype=int)
 
     # Initialize and fill tensor for current and historical board states
     history_length = len(history)
@@ -54,6 +54,8 @@ def generate_full_input_tensor(board, history):
     full_tensor[107, :, :] = board.has_queenside_castling_rights(chess.BLACK)
     full_tensor[108, :, :] = int(board.turn == chess.BLACK)  # IsBlackMove layer
     full_tensor[109, :, :] = 0  # 50-Move Rule Counter
+    full_tensor[110, :, :] = 0  # ???
+    full_tensor[111, :, :] = 0  # ???
 
     return full_tensor
 
