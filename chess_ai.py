@@ -33,8 +33,8 @@ WHITE_IS_HUMAN = True
 BLACK_IS_HUMAN = False
 
 # Define your custom colors
-SELECTED_ITEM_COLOR = (255, 215, 0)  # Gold color for selected items
-NON_SELECTED_ITEM_COLOR = (135, 206, 250)  # Sky blue color for non-selected items
+SELECTED_ITEM_COLOR = (255, 194, 226)  # Gold color for selected items
+NON_SELECTED_ITEM_COLOR = (244, 255, 253)  # Sky blue color for non-selected items
 
 # Global variables to store player settings
 play_mode = "AI"  # Other option is 'Human'
@@ -334,22 +334,43 @@ def load_background():
     return background_image
 
 
+def draw_text_with_shadow(screen, text, font, color, shadow_color, position):
+    text_surface = font.render(text, True, color)
+    shadow_surface = font.render(text, True, shadow_color)
+    x, y = position
+    # Position the shadow slightly offset from the text's position
+    shadow_position = (x + 2, y + 2)  # Adjust the offset to your liking
+
+    # Draw the shadow first
+    screen.blit(shadow_surface, shadow_position)
+    # Then draw the text
+    screen.blit(text_surface, position)
+
+
+
 def show_menu(screen, font, background_image):
-    menu_items = ["Play", "Options", "Quit"]
+    menu_items = ['Play', 'Options', 'Quit']
     selected_index = 0
 
     def draw_menu():
-        screen.blit(background_image, (0, 0))  # Blit the background image
-
+        screen.blit(background_image, (0, 0))  # Draw the background image
+        
         for index, item in enumerate(menu_items):
             if index == selected_index:
-                color = SELECTED_ITEM_COLOR
+                color = SELECTED_ITEM_COLOR  # White for selected item
+                shadow_color = (50, 50, 50)  # Dark grey for shadow
             else:
-                color = NON_SELECTED_ITEM_COLOR
-
-            label = font.render(item, True, color)
-            label_rect = label.get_rect(center=(TOTAL_WIDTH // 2, 150 + index * 50))
-            screen.blit(label, label_rect)
+                color = NON_SELECTED_ITEM_COLOR  # Light grey for non-selected items
+                shadow_color = (0, 0, 0)  # Black for shadow
+            
+            # Central position for the text
+            x = TOTAL_WIDTH // 2
+            y = 150 + index * 50
+            # Adjust text alignment if necessary
+            text_surface = font.render(item, True, color)
+            text_rect = text_surface.get_rect(center=(x, y))
+            
+            draw_text_with_shadow(screen, item, font, color, shadow_color, text_rect.topleft)
 
         pygame.display.flip()
 
@@ -357,7 +378,7 @@ def show_menu(screen, font, background_image):
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return "Quit"
+                return 'Quit'
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(menu_items)
@@ -368,7 +389,7 @@ def show_menu(screen, font, background_image):
 
         draw_menu()
 
-    return "Quit"
+    return 'Quit'
 
 
 def show_options(screen, font, background_image):
@@ -377,25 +398,32 @@ def show_options(screen, font, background_image):
     selected_index = 0
 
     def draw_options():
-        screen.fill(BACKGROUND)  # Clear the screen if background is not opaque
-        screen.blit(background_image, (0, 0))  # Blit the background image
-
+        screen.blit(background_image, (0, 0))  # Draw the background image
         for index, option in enumerate(options_menu):
             if index == selected_index:
-                color = SELECTED_ITEM_COLOR
+                color = SELECTED_ITEM_COLOR  # White for selected item
+                shadow_color = (50, 50, 50)  # Dark grey for shadow
             else:
-                color = NON_SELECTED_ITEM_COLOR
-
-            label = font.render(option, True, color)
-            label_rect = label.get_rect(center=(TOTAL_WIDTH // 2, 150 + index * 50))
-            screen.blit(label, label_rect)
+                color = NON_SELECTED_ITEM_COLOR  # Light grey for non-selected items
+                shadow_color = (0, 0, 0)  # Black for shadow
+            
+            # Central position for the text
+            x = TOTAL_WIDTH // 2
+            y = 150 + index * 50
+            # Adjust text alignment if necessary
+            text_surface = font.render(option, True, color)
+            text_rect = text_surface.get_rect(center=(x, y))
+            
+            draw_text_with_shadow(screen, option, font, color, shadow_color, text_rect.topleft)
 
         pygame.display.flip()
 
     running = True
     while running:
+        draw_options()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                pygame.quit()
                 return "Quit"
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
@@ -403,18 +431,16 @@ def show_options(screen, font, background_image):
                 elif event.key == pygame.K_DOWN:
                     selected_index = (selected_index + 1) % len(options_menu)
                 elif event.key == pygame.K_RETURN:
-                    if selected_index == 0:
+                    if selected_index == 0:  # Toggle Play Mode
                         play_mode = "AI" if play_mode == "Human" else "Human"
                         options_menu[selected_index] = "Play Mode: " + play_mode
-                    elif selected_index == 1:
+                    elif selected_index == 1:  # Toggle Player Color
                         player_color = "White" if player_color == "Black" else "Black"
                         options_menu[selected_index] = "Player Color: " + player_color
-                    elif selected_index == 2:
+                    elif selected_index == 2:  # Return to main menu
                         return
 
-        draw_options()
-
-    return "Quit"
+        pygame.time.wait(100)
 
 
 def main():
