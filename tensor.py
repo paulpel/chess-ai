@@ -45,3 +45,94 @@ class ChessTensor:
     def get_tensor(self):
         """ Returns the tensor representation of the board. """
         return self.tensor
+
+
+def generate_input_tensor(board, history):
+    # Create base tensor with shape for 8 plies (current + 7 historical)
+    tensor_shape = (6 * 2 + 1, 8, 8)  # 6 piece types * 2 colors + 1 repetition layer
+    full_tensor = np.zeros((tensor_shape[0] * 8 + 6, 8, 8), dtype=int)  # Adding castling rights, isBlackMove, and 50moveRuleCounter
+
+    # Fill tensor for current and historical board states
+    for i in range(8):
+        if i < len(history):
+            current_board = history[i]
+        else:
+            current_board = board if i == 0 else chess.Board('8/8/8/8/8/8/8/8 w - - 0 1')  # Empty board for excess history
+
+        chess_tensor = ChessTensor()
+        chess_tensor.parse_fen(current_board.fen())
+        board_tensor = chess_tensor.get_tensor()[:12, :, :]  # Ignore castling and en passant layers from ChessTensor
+
+        # Stack the current board tensor in the correct position
+        full_tensor[i * 13:(i + 1) * 13 - 1, :, :] = board_tensor  # Place piece info, skipping last repetition layer
+
+    # Add castling rights
+    castling = [0] * 4
+    if board.has_kingside_castling_rights(chess.WHITE):
+        castling[0] = 1
+    if board.has_queenside_castling_rights(chess.WHITE):
+        castling[1] = 1
+    if board.has_kingside_castling_rights(chess.BLACK):
+        castling[2] = 1
+    if board.has_queenside_castling_rights(chess.BLACK):
+        castling[3] = 1
+    full_tensor[104:108, 0, 0] = castling
+
+    # Add isBlackMove
+    full_tensor[108, 0, 0] = int(board.turn == chess.BLACK)
+
+    # Add 50-move rule counter (all zeros, as specified)
+    full_tensor[109, :, :] = 0
+
+    return full_tensor
+
+
+def print_board(board):
+    # Simple function to print the chess board
+    print(board)
+
+
+def print_tensor_slice(tensor, layer):
+    # Print a specific slice of the tensor
+    print("Tensor slice for layer {}:".format(layer))
+    print(tensor[layer])
+
+
+def visualize_tensor(tensor):
+    # Function to visualize part of the tensor for quick inspection
+    print("Visualizing initial layers of the tensor:")
+    for i in range(12):  # Only visualize the first 12 layers (6 pieces x 2 colors)
+        print_tensor_slice(tensor, i)
+
+
+def main():
+    # Initialize the chess board and history
+    board = chess.Board()
+    history = [board.copy() for _ in range(7)]  # Example historical data
+
+    # Generate the tensor
+    tensor = generate_input_tensor(board, history)
+
+    # Test the tensor
+    print("Tensor shape:", tensor.shape)
+    print("Data type:", tensor.dtype)
+
+    # Print the board
+    print_board(board)
+
+    # Visualize part of the tensor
+    visualize_tensor(tensor)
+
+    # Further checks could include specific game scenarios
+    board.push_san("e4")
+    history.append(board.copy())
+    tensor_updated = generate_input_tensor(board, history[-8:])
+    print("Updated board after move 'e4':")
+    print_board(board)
+    print("Visualizing updated tensor:")
+    visualize_tensor(tensor_updated)
+
+
+if __name__ == "__main__":
+    main()
+
