@@ -25,13 +25,22 @@ class ApplyPolicyMap(tf.keras.layers.Layer):
         h_conv_pol_flat = tf.reshape(inputs, [-1, 80 * 8 * 8])
         return tf.matmul(h_conv_pol_flat, tf.cast(self.fc1, h_conv_pol_flat.dtype))
 
-# Loading the model with both custom layers
-loaded_model = tf.keras.models.load_model('maia\\tf2\\mymodel2.h5', custom_objects={
+
+def load_model(path):
+    model = tf.keras.models.load_model(path, custom_objects={
     'ApplySqueezeExcitation': ApplySqueezeExcitation,
     'ApplyPolicyMap': ApplyPolicyMap
-})
+    })
+    return model
 
-loaded_model.summary()
+# # Loading the model with both custom layers
+# loaded_model = tf.keras.models.load_model('maia\\tf2\\mymodel2.h5', custom_objects={
+#     'ApplySqueezeExcitation': ApplySqueezeExcitation,
+#     'ApplyPolicyMap': ApplyPolicyMap
+# })
+# print("Model loaded successfully!")
+
+# loaded_model.summary()
 
 # # Freeze all layers except the last few
 # for layer in loaded_model.layers[:-11]:  # Adjust the index to freeze the desired layers

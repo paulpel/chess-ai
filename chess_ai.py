@@ -4,7 +4,7 @@ import os
 import time
 from tensor import generate_full_input_tensor
 import numpy as np
-from tensorflow.keras.models import load_model
+from maia_model_test import load_model
 from print_tensor import describe_and_print_tensor
 
 # Initialize Pygame
@@ -41,6 +41,8 @@ NON_SELECTED_ITEM_COLOR = (244, 255, 253)  # Sky blue color for non-selected ite
 play_mode = "AI"  # Other option is 'Human'
 player_color = "White"  # Other option is 'Black'
 ai_board_history = []
+
+loaded_ai_model = load_model('maia\\tf2\\mymodel2.h5')
 
 dragging = False  # Flag to track if a piece is being dragged
 dragged_piece = None  # Store the piece being dragged
@@ -219,6 +221,17 @@ def generate_possible_fens(board):
         board_copy.push(move)
         possible_fens.append(board_copy.fen())
     return possible_fens
+
+
+def generate_possible_boards_with_moves(board):
+    possible_boards = []
+    moves = []
+    for move in board.legal_moves:
+        board_copy = board.copy(stack=False)
+        board_copy.push(move)
+        possible_boards.append(board_copy)
+        moves.append(move)
+    return possible_boards, moves
 
 
 def choose_best_move(model, model_inputs):
@@ -571,10 +584,17 @@ def start_game(mode, color):
                         break  # This exits the main game loop
 
             if not human_turn and current_time - last_move_time > move_delay:
-                # TO DO
-                pass
-                # Generate possible FENs for the next AI moves
-                possible_fens = generate_possible_fens(board)
+                possible_boards, moves = generate_possible_boards_with_moves(board)
+                input_tensors = [generate_full_input_tensor(candidate_board, ai_board_history[-7:]) for candidate_board in possible_boards]
+                input_array = np.array(input_tensors, dtype=float).reshape((len(input_tensors), 112, 64))
+
+                predictions = loaded_ai_model.predict(input_array)
+                best_board = possible_boards[np.argmin(predictions[1],axis=0)[0]]
+                print(best_board)
+                best_move = moves[np.argmin(predictions[1],axis=0)[0]]
+                print(best_move)
+
+                make_move(board, best_move)
 
                                 # After a move is made, either by a human or the AI
                 game_state = check_game_state(board)
