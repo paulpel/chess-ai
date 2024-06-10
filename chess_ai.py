@@ -47,10 +47,10 @@ dragged_piece = None  # Store the piece being dragged
 dragged_piece_pos = (0, 0)  # Current position of the dragged piece
 selected_square = None  # The starting square of the dragged piece
 # Load the pre-trained model
-chess_cnn = load_model("my_chess_model.h5")
+# chess_cnn = load_model("my_chess_model.h5")
 
-# Ensure that your model is compiled after loading (you can use the same compile parameters)
-chess_cnn.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+# # Ensure that your model is compiled after loading (you can use the same compile parameters)
+# chess_cnn.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
 
 
 # Load images
