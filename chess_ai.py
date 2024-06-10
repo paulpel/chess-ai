@@ -6,6 +6,7 @@ from tensor import generate_full_input_tensor
 import numpy as np
 from maia_model_test import load_model
 from print_tensor import describe_and_print_tensor
+from maia.tf2.policy_index import policy_index
 
 # Initialize Pygame
 pygame.init()
@@ -437,7 +438,7 @@ def make_move(board, move):
     board.push(move)
     tensor = generate_full_input_tensor(board, ai_board_history[-7:])
     ai_board_history.append(board.copy())
-    describe_and_print_tensor(tensor)
+    # describe_and_print_tensor(tensor)
 
 
 def main():
@@ -584,15 +585,32 @@ def start_game(mode, color):
                         break  # This exits the main game loop
 
             if not human_turn and current_time - last_move_time > move_delay:
-                possible_boards, moves = generate_possible_boards_with_moves(board)
-                input_tensors = [generate_full_input_tensor(candidate_board, ai_board_history[-7:]) for candidate_board in possible_boards]
-                input_array = np.array(input_tensors, dtype=float).reshape((len(input_tensors), 112, 64))
 
-                predictions = loaded_ai_model.predict(input_array)
-                best_board = possible_boards[np.argmin(predictions[1],axis=0)[0]]
-                print(best_board)
-                best_move = moves[np.argmin(predictions[1],axis=0)[0]]
-                print(best_move)
+                # # METODA WYKORZYSTUJĄCA VALUE HEAD
+                # possible_boards, moves = generate_possible_boards_with_moves(board)
+                # print(moves)
+                # input_tensors = [generate_full_input_tensor(candidate_board, ai_board_history[-7:]) for candidate_board in possible_boards]
+                # input_array = np.array(input_tensors, dtype=float).reshape((len(input_tensors), 112, 64))
+
+                # predictions = loaded_ai_model.predict(input_array)
+                # best_board = possible_boards[np.argmax(predictions[1],axis=0)[0]]
+                # print(best_board)
+                # best_move = moves[np.argmax(predictions[1],axis=0)[0]]
+                # print(best_move, type(best_move))
+
+                # make_move(board, best_move)
+
+
+                # METODA WYKORZYSTUJĄCA POLICY HEAD
+                possible_boards, moves = generate_possible_boards_with_moves(board)
+                print(moves)
+                moves_indices = np.array([policy_index.index(move.uci()) for move in moves])
+                input_tensor = generate_full_input_tensor(board, ai_board_history[-7:])
+                input_array = np.array([input_tensor], dtype=float).reshape((1, 112, 64))
+                prediction = loaded_ai_model.predict(input_array)
+                print(prediction[0][0])
+                best_move = moves[np.argmin(prediction[0][0][moves_indices])]
+                print(best_move, type(best_move))
 
                 make_move(board, best_move)
 
