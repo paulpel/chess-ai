@@ -20,7 +20,7 @@ class ChessTensor:
                     col_index += int(char)  # Skip empty squares
                 else:
                     index = self.piece_index(char)
-                    self.tensor[index][7 - row_index][col_index] = True
+                    self.tensor[index][row_index][col_index] = True
                     col_index += 1
 
     def get_tensor(self):
@@ -55,7 +55,7 @@ def generate_full_input_tensor(board, history):
     full_tensor[108, :, :] = int(board.turn == chess.BLACK)  # IsBlackMove layer
     full_tensor[109, :, :] = 0  # 50-Move Rule Counter
     full_tensor[110, :, :] = 0  # ???
-    full_tensor[111, :, :] = 0  # ???
+    full_tensor[111, :, :] = 1 # ???
 
     return full_tensor
 
