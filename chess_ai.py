@@ -77,7 +77,7 @@ def load_images():
 # Function to get square from mouse position
 def get_square_from_mouse(pos):
     x, y = pos
-    row = y // SQUARE_SIZE
+    row = 7 - (y // SQUARE_SIZE)
     col = x // SQUARE_SIZE
     return chess.square(col, row)
 
@@ -118,7 +118,7 @@ def draw_pieces(screen, images, board):
                 images[color + symbol.upper()],
                 pygame.Rect(
                     (square % 8) * SQUARE_SIZE + OFFSET,
-                    (square // 8) * SQUARE_SIZE + OFFSET,
+                    (7 - square // 8) * SQUARE_SIZE + OFFSET,
                     SQUARE_SIZE,
                     SQUARE_SIZE,
                 ),
