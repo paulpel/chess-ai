@@ -27,7 +27,7 @@ class ChessTensor:
         return self.tensor
 
 def generate_full_input_tensor(board, history):
-    print(len(history))
+    # print(len(history))
     full_tensor = np.zeros((112, 8, 8), dtype=int)
 
     # Initialize and fill tensor for current and historical board states
