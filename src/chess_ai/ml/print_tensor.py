@@ -1,13 +1,15 @@
-# Assume the tensor shape is (110, 8, 8) where:
+# Assume the tensor shape is (112, 8, 8) where:
 # - 104 layers are for 8 plies of board states (13 layers each)
 # - 4 layers for castling rights
-# - 1 layer for who's turn it is
+# - 1 layer for whose turn it is
 # - 1 layer for the 50-move rule
+# - 2 trailing constant layers (Leela input padding)
+
 
 def describe_and_print_tensor(tensor):
-    piece_symbols = 'PRNBQKprnbqk'  # Order of pieces in the tensor layers
+    piece_symbols = "PRNBQKprnbqk"  # Order of pieces in the tensor layers
     descriptions = []
-    
+
     # Generate descriptions for each of the 104 layers related to board states
     for ply in range(8):
         for i, symbol in enumerate(piece_symbols):
@@ -19,10 +21,10 @@ def describe_and_print_tensor(tensor):
     descriptions.append("Castling rights: White queenside")
     descriptions.append("Castling rights: Black kingside")
     descriptions.append("Castling rights: Black queenside")
-    
+
     # Current player turn
     descriptions.append("Current player turn (1 for Black, 0 for White)")
-    
+
     # 50-move rule counter (assumed to be unused and set to zeros)
     descriptions.append("50-move rule counter (unused, always zeros)")
     descriptions.append("???")

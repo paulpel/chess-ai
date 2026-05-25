@@ -1,12 +1,15 @@
 import numpy as np
 import chess
 
+
 class ChessTensor:
     def __init__(self):
-        self.tensor = np.zeros((12, 8, 8), dtype=bool)  # 12 layers: one for each piece type and color
+        self.tensor = np.zeros(
+            (12, 8, 8), dtype=bool
+        )  # 12 layers: one for each piece type and color
 
     def piece_index(self, piece):
-        piece_order = 'PRNBQKprnbqk'  # Order: White Pawn, Rook, Knight, Bishop, Queen, King, then Black
+        piece_order = "PRNBQKprnbqk"  # Order: White Pawn, Rook, Knight, Bishop, Queen, King, then Black
         return piece_order.index(piece)
 
     def parse_fen(self, fen):
@@ -25,6 +28,7 @@ class ChessTensor:
 
     def get_tensor(self):
         return self.tensor
+
 
 def generate_full_input_tensor(board, history):
     # print(len(history))
@@ -45,7 +49,7 @@ def generate_full_input_tensor(board, history):
         else:
             # For non-existent past states, the tensor remains zero filled
             pass
-        full_tensor[i * 13:(i + 1) * 13 - 1, :, :] = chess_tensor.get_tensor()
+        full_tensor[i * 13 : (i + 1) * 13 - 1, :, :] = chess_tensor.get_tensor()
 
     # Castling and game state layers
     full_tensor[104, :, :] = board.has_kingside_castling_rights(chess.WHITE)
@@ -55,7 +59,6 @@ def generate_full_input_tensor(board, history):
     full_tensor[108, :, :] = int(board.turn == chess.BLACK)  # IsBlackMove layer
     full_tensor[109, :, :] = 0  # 50-Move Rule Counter
     full_tensor[110, :, :] = 0  # ???
-    full_tensor[111, :, :] = 1 # ???
+    full_tensor[111, :, :] = 1  # ???
 
     return full_tensor
-

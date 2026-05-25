@@ -1,9 +1,9 @@
-import chess.pgn
-import random
 import io
-import numpy as np
-import torch
+import random
+
+import chess.pgn
 import requests
+
 
 def get_random_games_from_player(username, num_games=100):
     url = f"https://lichess.org/api/games/user/{username}"

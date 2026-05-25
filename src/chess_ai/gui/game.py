@@ -1,11 +1,12 @@
-import pygame
-import chess
-import os
 import time
-from tensor import generate_full_input_tensor
+
+import chess
 import numpy as np
-from maia_model_test import load_model
-from print_tensor import describe_and_print_tensor
+import pygame
+
+from chess_ai.ml.maia_model import load_model
+from chess_ai.ml.tensor import generate_full_input_tensor
+from chess_ai.paths import BACKGROUND, GUI_IMAGES, MAIA_MODEL
 from maia.tf2.policy_index import policy_index
 
 # Initialize Pygame
@@ -43,17 +44,22 @@ play_mode = "AI"  # Other option is 'Human'
 player_color = "White"  # Other option is 'Black'
 ai_board_history = []
 
-loaded_ai_model = load_model('maia\\tf2\\mymodel2.h5')
+# The Maia model is loaded lazily on first use, so importing this module
+# (e.g. for tests) does not pull in TensorFlow or require the weights file.
+_loaded_ai_model = None
+
+
+def get_ai_model():
+    global _loaded_ai_model
+    if _loaded_ai_model is None:
+        _loaded_ai_model = load_model(str(MAIA_MODEL))
+    return _loaded_ai_model
+
 
 dragging = False  # Flag to track if a piece is being dragged
 dragged_piece = None  # Store the piece being dragged
 dragged_piece_pos = (0, 0)  # Current position of the dragged piece
 selected_square = None  # The starting square of the dragged piece
-# Load the pre-trained model
-# chess_cnn = load_model("my_chess_model.h5")
-
-# # Ensure that your model is compiled after loading (you can use the same compile parameters)
-# chess_cnn.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
 
 
 # Load images
@@ -64,9 +70,7 @@ def load_images():
     for piece in pieces:
         for color in colors:
             images[color + piece] = pygame.transform.scale(
-                pygame.image.load(
-                    os.path.join("images", f"{color}{piece.lower()}.png")
-                ),
+                pygame.image.load(str(GUI_IMAGES / f"{color}{piece.lower()}.png")),
                 (SQUARE_SIZE, SQUARE_SIZE),
             )
     small_images = {}
@@ -317,7 +321,7 @@ def display_endgame_message(screen, game_state):
 
 
 def load_background():
-    background_image = pygame.image.load("bg.png")
+    background_image = pygame.image.load(str(BACKGROUND))
     # Optionally scale the image to fit your screen size
     background_image = pygame.transform.scale(
         background_image, (TOTAL_WIDTH, TOTAL_HEIGHT)
@@ -338,14 +342,13 @@ def draw_text_with_shadow(screen, text, font, color, shadow_color, position):
     screen.blit(text_surface, position)
 
 
-
 def show_menu(screen, font, background_image):
-    menu_items = ['Play', 'Options', 'Quit']
+    menu_items = ["Play", "Options", "Quit"]
     selected_index = 0
 
     def draw_menu():
         screen.blit(background_image, (0, 0))  # Draw the background image
-        
+
         for index, item in enumerate(menu_items):
             if index == selected_index:
                 color = SELECTED_ITEM_COLOR  # White for selected item
@@ -353,15 +356,17 @@ def show_menu(screen, font, background_image):
             else:
                 color = NON_SELECTED_ITEM_COLOR  # Light grey for non-selected items
                 shadow_color = (0, 0, 0)  # Black for shadow
-            
+
             # Central position for the text
             x = TOTAL_WIDTH // 2
             y = 150 + index * 50
             # Adjust text alignment if necessary
             text_surface = font.render(item, True, color)
             text_rect = text_surface.get_rect(center=(x, y))
-            
-            draw_text_with_shadow(screen, item, font, color, shadow_color, text_rect.topleft)
+
+            draw_text_with_shadow(
+                screen, item, font, color, shadow_color, text_rect.topleft
+            )
 
         pygame.display.flip()
 
@@ -369,7 +374,7 @@ def show_menu(screen, font, background_image):
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return 'Quit'
+                return "Quit"
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(menu_items)
@@ -380,7 +385,7 @@ def show_menu(screen, font, background_image):
 
         draw_menu()
 
-    return 'Quit'
+    return "Quit"
 
 
 def show_options(screen, font, background_image):
@@ -405,7 +410,9 @@ def show_options(screen, font, background_image):
             text_surface = font.render(option, True, color)
             text_rect = text_surface.get_rect(center=(x, y))
 
-            draw_text_with_shadow(screen, option, font, color, shadow_color, text_rect.topleft)
+            draw_text_with_shadow(
+                screen, option, font, color, shadow_color, text_rect.topleft
+            )
 
         pygame.display.flip()
 
@@ -436,9 +443,8 @@ def show_options(screen, font, background_image):
 
 def make_move(board, move):
     board.push(move)
-    tensor = generate_full_input_tensor(board, ai_board_history[-7:])
+    generate_full_input_tensor(board, ai_board_history[-7:])
     ai_board_history.append(board.copy())
-    # describe_and_print_tensor(tensor)
 
 
 def main():
@@ -585,36 +591,22 @@ def start_game(mode, color):
                         break  # This exits the main game loop
 
             if not human_turn and current_time - last_move_time > move_delay:
-
-                # # METODA WYKORZYSTUJĄCA VALUE HEAD
-                # possible_boards, moves = generate_possible_boards_with_moves(board)
-                # print(moves)
-                # input_tensors = [generate_full_input_tensor(candidate_board, ai_board_history[-7:]) for candidate_board in possible_boards]
-                # input_array = np.array(input_tensors, dtype=float).reshape((len(input_tensors), 112, 64))
-
-                # predictions = loaded_ai_model.predict(input_array)
-                # best_board = possible_boards[np.argmax(predictions[1],axis=0)[0]]
-                # print(best_board)
-                # best_move = moves[np.argmax(predictions[1],axis=0)[0]]
-                # print(best_move, type(best_move))
-
-                # make_move(board, best_move)
-
-
-                # METODA WYKORZYSTUJĄCA POLICY HEAD
+                # Pick the AI move via the Maia policy head: score every legal
+                # move and choose the one the network rates highest.
                 possible_boards, moves = generate_possible_boards_with_moves(board)
-                print(moves)
-                moves_indices = np.array([policy_index.index(move.uci()) for move in moves])
+                moves_indices = np.array(
+                    [policy_index.index(move.uci()) for move in moves]
+                )
                 input_tensor = generate_full_input_tensor(board, ai_board_history[-7:])
-                input_array = np.array([input_tensor], dtype=float).reshape((1, 112, 64))
-                prediction = loaded_ai_model.predict(input_array)
-                print(prediction[0][0])
+                input_array = np.array([input_tensor], dtype=float).reshape(
+                    (1, 112, 64)
+                )
+                prediction = get_ai_model().predict(input_array)
                 best_move = moves[np.argmin(prediction[0][0][moves_indices])]
-                print(best_move, type(best_move))
 
                 make_move(board, best_move)
 
-                                # After a move is made, either by a human or the AI
+                # After a move is made, either by a human or the AI
                 game_state = check_game_state(board)
                 if game_state != "ongoing":
                     display_endgame_message(screen, game_state)

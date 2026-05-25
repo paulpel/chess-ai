@@ -1,0 +1,31 @@
+chess-ai
+Copyright (C) 2024 Pawel Pelar and contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See the LICENSE file for the full text.
+
+================================================================================
+Third-party components
+================================================================================
+
+This project bundles source code from Leela Chess Zero (LCZero), located under
+`third_party/maia/`:
+
+  - third_party/maia/tf2/lc0_az_policy_map.py
+  - third_party/maia/tf2/policy_index.py
+
+    Leela Chess Zero
+    Copyright (C) 2019 The LCZero Authors
+    Licensed under the GNU General Public License v3.
+    https://github.com/LeelaChessZero/lc0
+
+The neural-network weights in `models/mymodel2.h5` are derived from the Maia
+Chess project, which trains human-like chess engines on top of the LCZero
+pipeline.
+
+    Maia Chess — https://maiachess.com — https://github.com/CSSLab/maia-chess
+
+Because this project incorporates and links against GPL-3.0 licensed LCZero
+code, the work as a whole is distributed under the GPL-3.0 (see LICENSE).

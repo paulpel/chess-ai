@@ -1,8 +1,10 @@
 import copy
 import random
-import pygame
 import time
 
+import pygame
+
+from chess_ai.paths import ENGINE_IMAGES
 
 # Constants
 WIDTH, HEIGHT = 800, 800  # Window size
@@ -107,30 +109,54 @@ class Chess:
                     )
 
     def load_pieces(self):
-        rook_img_b = pygame.image.load("Assets/rook_black.png").convert_alpha()
+        rook_img_b = pygame.image.load(
+            str(ENGINE_IMAGES / "rook_black.png")
+        ).convert_alpha()
         rook_img_b = pygame.transform.scale(rook_img_b, (SQUARE_SIZE, SQUARE_SIZE))
-        bishop_img_b = pygame.image.load("Assets/bishop_black.png").convert_alpha()
+        bishop_img_b = pygame.image.load(
+            str(ENGINE_IMAGES / "bishop_black.png")
+        ).convert_alpha()
         bishop_img_b = pygame.transform.scale(bishop_img_b, (SQUARE_SIZE, SQUARE_SIZE))
-        king_img_b = pygame.image.load("Assets/king_black.png").convert_alpha()
+        king_img_b = pygame.image.load(
+            str(ENGINE_IMAGES / "king_black.png")
+        ).convert_alpha()
         king_img_b = pygame.transform.scale(king_img_b, (SQUARE_SIZE, SQUARE_SIZE))
-        queen_img_b = pygame.image.load("Assets/queen_black.png").convert_alpha()
+        queen_img_b = pygame.image.load(
+            str(ENGINE_IMAGES / "queen_black.png")
+        ).convert_alpha()
         queen_img_b = pygame.transform.scale(queen_img_b, (SQUARE_SIZE, SQUARE_SIZE))
-        pawn_img_b = pygame.image.load("Assets/pawn_black.png").convert_alpha()
+        pawn_img_b = pygame.image.load(
+            str(ENGINE_IMAGES / "pawn_black.png")
+        ).convert_alpha()
         pawn_img_b = pygame.transform.scale(pawn_img_b, (SQUARE_SIZE, SQUARE_SIZE))
-        knight_img_b = pygame.image.load("Assets/knight_black.png").convert_alpha()
+        knight_img_b = pygame.image.load(
+            str(ENGINE_IMAGES / "knight_black.png")
+        ).convert_alpha()
         knight_img_b = pygame.transform.scale(knight_img_b, (SQUARE_SIZE, SQUARE_SIZE))
 
-        rook_img_w = pygame.image.load("Assets/rook_white.png").convert_alpha()
+        rook_img_w = pygame.image.load(
+            str(ENGINE_IMAGES / "rook_white.png")
+        ).convert_alpha()
         rook_img_w = pygame.transform.scale(rook_img_w, (SQUARE_SIZE, SQUARE_SIZE))
-        bishop_img_w = pygame.image.load("Assets/bishop_white.png").convert_alpha()
+        bishop_img_w = pygame.image.load(
+            str(ENGINE_IMAGES / "bishop_white.png")
+        ).convert_alpha()
         bishop_img_w = pygame.transform.scale(bishop_img_w, (SQUARE_SIZE, SQUARE_SIZE))
-        king_img_w = pygame.image.load("Assets/king_white.png").convert_alpha()
+        king_img_w = pygame.image.load(
+            str(ENGINE_IMAGES / "king_white.png")
+        ).convert_alpha()
         king_img_w = pygame.transform.scale(king_img_w, (SQUARE_SIZE, SQUARE_SIZE))
-        queen_img_w = pygame.image.load("Assets/queen_white.png").convert_alpha()
+        queen_img_w = pygame.image.load(
+            str(ENGINE_IMAGES / "queen_white.png")
+        ).convert_alpha()
         queen_img_w = pygame.transform.scale(queen_img_w, (SQUARE_SIZE, SQUARE_SIZE))
-        pawn_img_w = pygame.image.load("Assets/pawn_white.png").convert_alpha()
+        pawn_img_w = pygame.image.load(
+            str(ENGINE_IMAGES / "pawn_white.png")
+        ).convert_alpha()
         pawn_img_w = pygame.transform.scale(pawn_img_w, (SQUARE_SIZE, SQUARE_SIZE))
-        knight_img_w = pygame.image.load("Assets/knight_white.png").convert_alpha()
+        knight_img_w = pygame.image.load(
+            str(ENGINE_IMAGES / "knight_white.png")
+        ).convert_alpha()
         knight_img_w = pygame.transform.scale(knight_img_w, (SQUARE_SIZE, SQUARE_SIZE))
 
         self.piece_images = {
@@ -893,6 +919,10 @@ class Chess:
                     self.black_castle[1] = False
 
 
-if __name__ == "__main__":
+def main():
     chess_obj = Chess()
     chess_obj.main()
+
+
+if __name__ == "__main__":
+    main()

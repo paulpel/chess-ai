@@ -1,3 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
 **/venv
+
+# uv (keep uv.lock tracked)
+
+# OS / editors
+.DS_Store
 **/.DS_Store
-**/__pycache__/
+.idea/
+.vscode/
+
+# Project scratch
+games.pgn       # downloaded PGN dump from chess_ai.data.prep_data
+*.log

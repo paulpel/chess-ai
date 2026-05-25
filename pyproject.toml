@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chess-ai"
+version = "0.1.0"
+description = "A chess engine built from scratch plus a Maia neural-network opponent that imitates human play."
+readme = "README.md"
+requires-python = ">=3.10,<3.12"  # TensorFlow 2.15 (Maia) supports Python 3.9–3.11
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Pawel Pelar" },
+    { name = "RSmolak" },
+]
+dependencies = [
+    "pygame>=2.5,<3",
+    "chess>=1.10",          # python-chess
+    "numpy>=1.26,<2",       # <2: required by TensorFlow 2.15
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+# Neural-network move selection (Maia) and CNN training. Heavy: pulls in TensorFlow.
+ml = [
+    "tensorflow==2.15.0",  # pinned: the Maia .h5 + custom layers load only on TF/Keras 2.15
+    "scikit-learn>=1.3",
+]
+
+[project.scripts]
+chess-engine = "chess_ai.engine.app:main"   # from-scratch engine (pygame only)
+chess-gui = "chess_ai.gui.game:main"         # Maia AI GUI (requires the "ml" extra)
+
+[dependency-groups]
+dev = ["black>=24.4"]
+
+[tool.uv]
+# TensorFlow 2.15 ships no aarch64-Linux wheel for this pin, so resolve the
+# lockfile only for the standard desktop/server platforms this project targets.
+environments = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
+
+[tool.hatch.build.targets.wheel]
+# chess_ai is our package; maia is vendored LCZero code kept importable as a top-level package.
+packages = ["src/chess_ai", "third_party/maia"]
+
+[tool.black]
+line-length = 88
