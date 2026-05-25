@@ -25,7 +25,9 @@ hand, then explore how a model can imitate human play.
 
 ## Screenshots
 
-<!-- Add a screenshot or GIF of each app here, e.g. docs/img/engine.png and docs/img/gui.png -->
+| From-scratch engine (`chess-engine`) | Maia AI opponent (`chess-gui`) |
+|:------------------------------------:|:------------------------------:|
+| ![From-scratch chess engine](docs/img/engine.png) | ![Maia AI GUI](docs/img/gui.png) |
 
 ## Project layout
 
