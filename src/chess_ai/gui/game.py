@@ -30,7 +30,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 LIGHT_SQUARE = (240, 217, 181)
 DARK_SQUARE = (181, 136, 99)
-BACKGROUND = (73, 57, 44)
+BG_COLOR = (73, 57, 44)
 
 WHITE_IS_HUMAN = True
 BLACK_IS_HUMAN = False
@@ -506,7 +506,7 @@ def start_game(mode, color):
         # Options handling can be added here
         pass
     screen = pygame.display.set_mode((TOTAL_WIDTH, TOTAL_HEIGHT))
-    screen.fill(BACKGROUND)
+    screen.fill(BG_COLOR)
     pygame.display.set_caption("Chess")
     clock = pygame.time.Clock()
     images, small_images = load_images()

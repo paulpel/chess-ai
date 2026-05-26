@@ -32,7 +32,7 @@ chess-engine = "chess_ai.engine.app:main"   # from-scratch engine (pygame only)
 chess-gui = "chess_ai.gui.game:main"         # Maia AI GUI (requires the "ml" extra)
 
 [dependency-groups]
-dev = ["black>=24.4"]
+dev = ["black>=24.4", "pytest>=8"]
 
 [tool.uv]
 # TensorFlow 2.15 ships no aarch64-Linux wheel for this pin, so resolve the

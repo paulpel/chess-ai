@@ -241,7 +241,7 @@ class Chess:
         ):  # if en passant
             self.board[from_row][to_col] = "."
         if fig.lower() == "p" and abs(from_row - to_row) == 2:
-            self.en_passant_target = (from_col, from_row + to_row / 2)
+            self.en_passant_target = (from_col, (from_row + to_row) // 2)
         self.board[to_row][to_col] = fig
         self.board[from_row][from_col] = "."
 
@@ -680,7 +680,7 @@ class Chess:
                     target_piece = board[new_row][new_col]
                     if target_piece != ".":
                         if (
-                            target_piece.lower() == "q"
+                            target_piece.lower() in ("r", "q")
                             and target_piece.islower() != fig.islower()
                         ):
                             return True
